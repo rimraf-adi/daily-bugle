@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { RedditPost, RedditDigest, RedditQueryResult } from "@/types/reddit";
 
 const BASE_URL = "https://www.reddit.com";
-const DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 DailyBugle/1.0";
+const DEFAULT_USER_AGENT = "web:com.dailybugle.feed:v1.0.0 (by /u/DailyBugleNews)";
 
 export const COMMON_SUBREDDIT_ALIASES: Record<string, string> = {
   artificialintelligence: "artificial",
@@ -36,13 +36,11 @@ function decodeHtmlEntities(text: string): string {
 export function cleanRedditHtml(html: string): { cleanText: string; externalUrl?: string } {
   let externalUrl: string | undefined;
 
-  // 1. Look for [link] anchor href: <a href="(url)">[link]</a>
   const linkTagMatch = html.match(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>\s*\[link\]\s*<\/a>/i);
   if (linkTagMatch && linkTagMatch[1]) {
     externalUrl = decodeHtmlEntities(linkTagMatch[1]);
   }
 
-  // 2. If not found, look for any external link not pointing to reddit.com
   if (!externalUrl) {
     const allLinks = Array.from(html.matchAll(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>/gi));
     for (const match of allLinks) {
@@ -54,7 +52,6 @@ export function cleanRedditHtml(html: string): { cleanText: string; externalUrl?
     }
   }
 
-  // 3. Clean HTML tags for content text
   let stripped = html
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -65,7 +62,6 @@ export function cleanRedditHtml(html: string): { cleanText: string; externalUrl?
 
   stripped = decodeHtmlEntities(stripped);
 
-  // Remove common Reddit RSS boilerplate
   stripped = stripped
     .replace(/submitted by\s+\/u\/[a-zA-Z0-9_\-]+/gi, "")
     .replace(/\[link\]/gi, "")
@@ -92,15 +88,15 @@ export class RedditCrawler {
 
   constructor(
     userAgent: string = DEFAULT_USER_AGENT,
-    cacheTtlSeconds: number = 90,
-    timeoutSeconds: number = 15
+    cacheTtlSeconds: number = 300, // 5 minutes cache
+    timeoutSeconds: number = 20
   ) {
     this.userAgent = userAgent;
     this.cacheTtlMs = cacheTtlSeconds * 1000;
     this.timeoutMs = timeoutSeconds * 1000;
   }
 
-  private async throttle(minIntervalMs: number = 2000): Promise<void> {
+  private async throttle(minIntervalMs: number = 3000): Promise<void> {
     const currentQueue = this.throttleQueue;
     let nextResolve: () => void;
     this.throttleQueue = new Promise((resolve) => {
@@ -120,11 +116,13 @@ export class RedditCrawler {
   private async fetchFeedXml(url: string): Promise<string> {
     const now = Date.now();
     const cached = this.cache.get(url);
+
+    // If cache is fresh, return immediately without network call
     if (cached && now - cached.timestamp < this.cacheTtlMs) {
       return cached.rawXml;
     }
 
-    await this.throttle();
+    await this.throttle(3000);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -133,25 +131,23 @@ export class RedditCrawler {
       let resp = await fetch(url, {
         headers: {
           "User-Agent": this.userAgent,
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
+          Accept: "application/rss+xml, application/atom+xml, text/xml, */*",
         },
         signal: controller.signal,
         cache: "no-store",
       });
 
-      // Retry once on 429 after small backoff
+      // Handle 429 with backoff retry
       if (resp.status === 429) {
         if (cached) {
-          // Serve stale cache gracefully
           return cached.rawXml;
         }
+
         await new Promise((resolve) => setTimeout(resolve, 4000));
         resp = await fetch(url, {
           headers: {
             "User-Agent": this.userAgent,
-            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            Accept: "application/rss+xml, application/atom+xml, text/xml, */*",
           },
           signal: controller.signal,
           cache: "no-store",
@@ -162,7 +158,12 @@ export class RedditCrawler {
         if (cached) {
           return cached.rawXml;
         }
-        throw new Error(`Failed to crawl Reddit feed from '${url}' (HTTP ${resp.status})`);
+        if (resp.status === 429) {
+          throw new Error(
+            "Reddit rate limit active (429). The public RSS feed is cooling down; please wait a moment."
+          );
+        }
+        throw new Error(`Failed to crawl Reddit feed (HTTP ${resp.status})`);
       }
 
       const rawXml = await resp.text();
@@ -178,6 +179,10 @@ export class RedditCrawler {
   }
 
   parseFeedXml(xmlContent: string, fallbackSub: string = ""): RedditPost[] {
+    if (!xmlContent || !xmlContent.includes("<feed")) {
+      return [];
+    }
+
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: "@_",
@@ -193,7 +198,6 @@ export class RedditCrawler {
       const rawId = String(entry.id || "").trim();
       const title = String(entry.title?.["#text"] || entry.title || "").replace(/\s+/g, " ").trim();
 
-      // Permalink
       let permalink = "";
       if (entry.link && Array.isArray(entry.link)) {
         for (const l of entry.link) {
@@ -204,10 +208,8 @@ export class RedditCrawler {
         }
       }
 
-      // Author
       const author = entry.author?.name?.["#text"] || entry.author?.name || "/u/unknown";
 
-      // Subreddit category
       let subreddit = fallbackSub;
       if (entry.category && Array.isArray(entry.category)) {
         for (const cat of entry.category) {
@@ -252,7 +254,8 @@ export class RedditCrawler {
       params.set("t", timeFilter);
     }
     const queryStr = params.toString() ? `?${params.toString()}` : "";
-    const url = `${BASE_URL}/r/${cleanSub}/${listing}/.rss${queryStr}`;
+    // Notice: /r/{sub}/{listing}.rss
+    const url = `${BASE_URL}/r/${cleanSub}/${listing}.rss${queryStr}`;
 
     const rawXml = await this.fetchFeedXml(url);
     const allPosts = this.parseFeedXml(rawXml, `r/${cleanSub}`);
@@ -318,7 +321,7 @@ export class RedditCrawler {
         const posts = await this.getPosts(clean, listing, limitPerSub);
         allPosts.push(...posts);
       } catch {
-        // Tolerate individual failures
+        // Continue
       }
     }
 
@@ -332,4 +335,10 @@ export class RedditCrawler {
   }
 }
 
-export const defaultRedditCrawler = new RedditCrawler();
+// Global singleton attached to globalThis to preserve cache across Next.js reloads
+const globalForReddit = globalThis as unknown as {
+  redditCrawler?: RedditCrawler;
+};
+
+export const defaultRedditCrawler =
+  globalForReddit.redditCrawler || (globalForReddit.redditCrawler = new RedditCrawler());

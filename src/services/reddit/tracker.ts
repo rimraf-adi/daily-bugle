@@ -224,5 +224,11 @@ export class SubredditTracker {
   }
 }
 
-// Global singleton for the application runtime
-export const defaultSubredditTracker = new SubredditTracker();
+// Global singleton attached to globalThis to preserve watchlist state across Next.js reloads
+const globalForTracker = globalThis as unknown as {
+  subredditTracker?: SubredditTracker;
+};
+
+export const defaultSubredditTracker =
+  globalForTracker.subredditTracker ||
+  (globalForTracker.subredditTracker = new SubredditTracker());
