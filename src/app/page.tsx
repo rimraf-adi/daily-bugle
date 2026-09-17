@@ -80,14 +80,6 @@ export default function LandingPage() {
 
       {/* Hero Section: The Anti-Doomscroll Mission */}
       <section className="relative pt-16 pb-20 sm:pt-24 sm:pb-28 px-4 text-center max-w-5xl mx-auto flex flex-col items-center animate-fade-in-up">
-        {/* Minimalist Editorial Tag */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-editorial-pill shadow-sm mb-8 hover:scale-[1.02] transition-transform cursor-default">
-          <span className="w-2 h-2 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
-          <span className="text-xs font-mono font-medium tracking-wide text-zinc-800 dark:text-zinc-200">
-            SEC. 00 // ANTI-DOOMSCROLL BRIEFING • FINITE BY DESIGN
-          </span>
-        </div>
-
         {/* Hero Title: Modern Sans + Editorial Serif Italic Accent */}
         <h1 className="text-5xl sm:text-7xl md:text-8xl font-sans font-extrabold tracking-tight text-zinc-950 dark:text-[#f7f8f8] leading-[1.05]">
           A personalized newspaper for the digital era.{" "}
