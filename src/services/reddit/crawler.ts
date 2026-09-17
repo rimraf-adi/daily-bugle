@@ -1,8 +1,11 @@
+import fs from "fs";
+import path from "path";
 import { XMLParser } from "fast-xml-parser";
 import { RedditPost, RedditDigest, RedditQueryResult } from "@/types/reddit";
 
 const BASE_URL = "https://www.reddit.com";
-const DEFAULT_USER_AGENT = "web:com.dailybugle.feed:v1.0.0 (by /u/DailyBugleNews)";
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (DailyBugle/1.0)";
 
 export const COMMON_SUBREDDIT_ALIASES: Record<string, string> = {
   artificialintelligence: "artificial",
@@ -85,15 +88,52 @@ export class RedditCrawler {
   private cache: Map<string, CacheEntry> = new Map();
   private lastRequestTime: number = 0;
   private throttleQueue: Promise<void> = Promise.resolve();
+  private diskCacheDir: string;
 
   constructor(
     userAgent: string = DEFAULT_USER_AGENT,
-    cacheTtlSeconds: number = 300, // 5 minutes cache
+    cacheTtlSeconds: number = 600, // 10 minutes cache
     timeoutSeconds: number = 20
   ) {
     this.userAgent = userAgent;
     this.cacheTtlMs = cacheTtlSeconds * 1000;
     this.timeoutMs = timeoutSeconds * 1000;
+    this.diskCacheDir = path.join(process.cwd(), ".cache", "reddit");
+    this.initDiskCache();
+  }
+
+  private initDiskCache() {
+    try {
+      if (!fs.existsSync(this.diskCacheDir)) {
+        fs.mkdirSync(this.diskCacheDir, { recursive: true });
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  private getDiskCache(key: string): CacheEntry | null {
+    try {
+      const filePath = path.join(this.diskCacheDir, `${encodeURIComponent(key)}.json`);
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        const entry = JSON.parse(raw) as CacheEntry;
+        return entry;
+      }
+    } catch {
+      // Ignore
+    }
+    return null;
+  }
+
+  private saveDiskCache(key: string, entry: CacheEntry) {
+    try {
+      this.initDiskCache();
+      const filePath = path.join(this.diskCacheDir, `${encodeURIComponent(key)}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(entry), "utf-8");
+    } catch {
+      // Ignore
+    }
   }
 
   private async throttle(minIntervalMs: number = 3000): Promise<void> {
@@ -113,13 +153,18 @@ export class RedditCrawler {
     nextResolve!();
   }
 
-  private async fetchFeedXml(url: string): Promise<string> {
+  private async fetchFeedXml(url: string): Promise<{ xml: string; fromCache: boolean; rateLimited?: boolean }> {
     const now = Date.now();
-    const cached = this.cache.get(url);
+    const memCached = this.cache.get(url);
+    const diskCached = !memCached ? this.getDiskCache(url) : null;
+    const cached = memCached || diskCached;
 
-    // If cache is fresh, return immediately without network call
-    if (cached && now - cached.timestamp < this.cacheTtlMs) {
-      return cached.rawXml;
+    if (cached) {
+      this.cache.set(url, cached);
+      // If within TTL, serve cache without hitting network
+      if (now - cached.timestamp < this.cacheTtlMs) {
+        return { xml: cached.rawXml, fromCache: true };
+      }
     }
 
     await this.throttle(3000);
@@ -131,46 +176,51 @@ export class RedditCrawler {
       let resp = await fetch(url, {
         headers: {
           "User-Agent": this.userAgent,
-          Accept: "application/rss+xml, application/atom+xml, text/xml, */*",
+          Accept: "application/atom+xml,application/rss+xml,text/xml;q=0.9,*/*;q=0.8",
         },
         signal: controller.signal,
         cache: "no-store",
       });
 
-      // Handle 429 with backoff retry
+      // Handle 429 Too Many Requests
       if (resp.status === 429) {
+        // If we have any cached data (even stale), return it gracefully
         if (cached) {
-          return cached.rawXml;
+          return { xml: cached.rawXml, fromCache: true, rateLimited: true };
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 4000));
-        resp = await fetch(url, {
-          headers: {
-            "User-Agent": this.userAgent,
-            Accept: "application/rss+xml, application/atom+xml, text/xml, */*",
-          },
-          signal: controller.signal,
-          cache: "no-store",
-        });
+        const resetHeader = resp.headers.get("x-ratelimit-reset");
+        const resetSeconds = resetHeader ? parseInt(resetHeader, 10) : 5;
+
+        // If cooldown is short, wait and retry once
+        if (resetSeconds <= 6) {
+          await new Promise((resolve) => setTimeout(resolve, (resetSeconds + 1) * 1000));
+          resp = await fetch(url, {
+            headers: {
+              "User-Agent": this.userAgent,
+              Accept: "application/atom+xml,application/rss+xml,text/xml;q=0.9,*/*;q=0.8",
+            },
+            signal: controller.signal,
+            cache: "no-store",
+          });
+        }
       }
 
       if (!resp.ok) {
         if (cached) {
-          return cached.rawXml;
+          return { xml: cached.rawXml, fromCache: true, rateLimited: true };
         }
         if (resp.status === 429) {
-          throw new Error(
-            "Reddit rate limit active (429). The public RSS feed is cooling down; please wait a moment."
-          );
+          return { xml: "", fromCache: false, rateLimited: true };
         }
-        throw new Error(`Failed to crawl Reddit feed (HTTP ${resp.status})`);
+        throw new Error(`Failed to crawl Reddit feed from '${url}' (HTTP ${resp.status})`);
       }
 
       const rawXml = await resp.text();
-      return rawXml;
+      return { xml: rawXml, fromCache: false };
     } catch (err) {
       if (cached) {
-        return cached.rawXml;
+        return { xml: cached.rawXml, fromCache: true };
       }
       throw err;
     } finally {
@@ -254,22 +304,25 @@ export class RedditCrawler {
       params.set("t", timeFilter);
     }
     const queryStr = params.toString() ? `?${params.toString()}` : "";
-    // Notice: /r/{sub}/{listing}.rss
     const url = `${BASE_URL}/r/${cleanSub}/${listing}.rss${queryStr}`;
 
-    const rawXml = await this.fetchFeedXml(url);
-    const allPosts = this.parseFeedXml(rawXml, `r/${cleanSub}`);
+    const { xml, fromCache, rateLimited } = await this.fetchFeedXml(url);
+    const allPosts = this.parseFeedXml(xml, `r/${cleanSub}`);
 
-    this.cache.set(url, {
-      timestamp: Date.now(),
-      posts: allPosts,
-      rawXml,
-    });
+    if (allPosts.length > 0) {
+      const entry: CacheEntry = {
+        timestamp: Date.now(),
+        posts: allPosts,
+        rawXml: xml,
+      };
+      this.cache.set(url, entry);
+      this.saveDiskCache(url, entry);
+    }
 
     const posts = allPosts.slice(0, limit);
     return {
       posts,
-      rawXml,
+      rawXml: xml,
       subreddit: `r/${cleanSub}`,
       listing,
       url,
@@ -300,8 +353,8 @@ export class RedditCrawler {
       fallbackSub = "r/all";
     }
 
-    const rawXml = await this.fetchFeedXml(url);
-    const posts = this.parseFeedXml(rawXml, fallbackSub);
+    const { xml } = await this.fetchFeedXml(url);
+    const posts = this.parseFeedXml(xml, fallbackSub);
     return posts.slice(0, limit);
   }
 
