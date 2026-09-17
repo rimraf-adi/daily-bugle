@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { RedditPost, RedditDigest, RedditQueryResult } from "@/types/reddit";
 
 const BASE_URL = "https://www.reddit.com";
-const DEFAULT_USER_AGENT = "DailyBugleCrawler/1.0 (contact: bot@dailybugle.local; platform: news-aggregator)";
+const DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 DailyBugle/1.0";
 
 export const COMMON_SUBREDDIT_ALIASES: Record<string, string> = {
   artificialintelligence: "artificial",
@@ -88,10 +88,11 @@ export class RedditCrawler {
   private timeoutMs: number;
   private cache: Map<string, CacheEntry> = new Map();
   private lastRequestTime: number = 0;
+  private throttleQueue: Promise<void> = Promise.resolve();
 
   constructor(
     userAgent: string = DEFAULT_USER_AGENT,
-    cacheTtlSeconds: number = 60,
+    cacheTtlSeconds: number = 90,
     timeoutSeconds: number = 15
   ) {
     this.userAgent = userAgent;
@@ -99,13 +100,21 @@ export class RedditCrawler {
     this.timeoutMs = timeoutSeconds * 1000;
   }
 
-  private async throttle(minIntervalMs: number = 2500): Promise<void> {
+  private async throttle(minIntervalMs: number = 2000): Promise<void> {
+    const currentQueue = this.throttleQueue;
+    let nextResolve: () => void;
+    this.throttleQueue = new Promise((resolve) => {
+      nextResolve = resolve;
+    });
+
+    await currentQueue;
     const now = Date.now();
     const elapsed = now - this.lastRequestTime;
     if (elapsed < minIntervalMs) {
       await new Promise((resolve) => setTimeout(resolve, minIntervalMs - elapsed));
     }
     this.lastRequestTime = Date.now();
+    nextResolve!();
   }
 
   private async fetchFeedXml(url: string): Promise<string> {
@@ -124,7 +133,8 @@ export class RedditCrawler {
       let resp = await fetch(url, {
         headers: {
           "User-Agent": this.userAgent,
-          Accept: "application/atom+xml,application/xml,text/xml",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
         },
         signal: controller.signal,
         cache: "no-store",
@@ -132,11 +142,16 @@ export class RedditCrawler {
 
       // Retry once on 429 after small backoff
       if (resp.status === 429) {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        if (cached) {
+          // Serve stale cache gracefully
+          return cached.rawXml;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 4000));
         resp = await fetch(url, {
           headers: {
             "User-Agent": this.userAgent,
-            Accept: "application/atom+xml,application/xml,text/xml",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
           },
           signal: controller.signal,
           cache: "no-store",
@@ -144,11 +159,19 @@ export class RedditCrawler {
       }
 
       if (!resp.ok) {
+        if (cached) {
+          return cached.rawXml;
+        }
         throw new Error(`Failed to crawl Reddit feed from '${url}' (HTTP ${resp.status})`);
       }
 
       const rawXml = await resp.text();
       return rawXml;
+    } catch (err) {
+      if (cached) {
+        return cached.rawXml;
+      }
+      throw err;
     } finally {
       clearTimeout(timer);
     }

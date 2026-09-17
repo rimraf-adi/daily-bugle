@@ -84,7 +84,12 @@ function DashboardContent() {
       const data: ArxivQueryResult = await resp.json();
       setArxivResult(data);
     } catch (err) {
-      setArxivError(err instanceof Error ? err.message : "Error fetching arXiv papers");
+      const msg = err instanceof Error ? err.message : "Error fetching arXiv papers";
+      if (msg.includes("NetworkError") || msg.includes("Failed to fetch")) {
+        setArxivError("Connecting to local API... please click 'Fetch' again in a moment.");
+      } else {
+        setArxivError(msg);
+      }
     } finally {
       setArxivLoading(false);
     }
@@ -130,7 +135,12 @@ function DashboardContent() {
       const data: RedditQueryResult = await resp.json();
       setRedditResult(data);
     } catch (err) {
-      setRedditError(err instanceof Error ? err.message : "Error crawling Reddit");
+      const msg = err instanceof Error ? err.message : "Error crawling Reddit";
+      if (msg.includes("NetworkError") || msg.includes("Failed to fetch")) {
+        setRedditError("Connecting to Reddit feed... please click 'Crawl' again in a moment.");
+      } else {
+        setRedditError(msg);
+      }
     } finally {
       setRedditLoading(false);
     }
