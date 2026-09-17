@@ -47,7 +47,7 @@ export function Header() {
           </Link>
 
           {/* Center Navigation Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-3 py-1">
+          <nav className="hidden md:flex items-center gap-0.5 p-1 rounded-full bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
             {navLinks.map((link) => {
               const isActive =
                 link.href === "/"
@@ -62,13 +62,16 @@ export function Header() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs transition-all duration-200 ${
                     isActive
-                      ? "text-zinc-950 bg-black/10 font-semibold shadow-sm dark:text-white dark:bg-white/10"
-                      : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.05]"
+                      ? "text-zinc-950 dark:text-[#f7f8f8] bg-white dark:bg-[#181b22] font-semibold shadow-[0_2px_6px_rgba(0,0,0,0.06),0_1px_1px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.12)] border border-black/[0.04] dark:border-white/[0.08]"
+                      : "text-[#5b5a57] dark:text-[#8a8f98] hover:text-zinc-950 dark:hover:text-[#f7f8f8] hover:bg-black/[0.02] dark:hover:bg-white/[0.03] font-medium"
                   }`}
                 >
-                  {link.name}
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
+                  )}
+                  <span>{link.name}</span>
                 </Link>
               );
             })}
@@ -79,12 +82,12 @@ export function Header() {
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
-            {/* Read Today's Edition CTA */}
+            {/* Read Edition CTA */}
             <Link
               href="/edition"
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold btn-editorial-primary group"
             >
-              <span>Today's Edition</span>
+              <span>Read Edition</span>
               <div className="w-4 h-4 rounded-full bg-[var(--accent-terracotta)] text-white flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
                 <ArrowUpRight className="w-2.5 h-2.5" />
               </div>
