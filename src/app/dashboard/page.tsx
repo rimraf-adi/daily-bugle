@@ -35,6 +35,8 @@ import {
   Sliders,
   Database,
   Code2,
+  ArrowRight,
+  ArrowUpRight,
 } from "lucide-react";
 
 function DashboardContent() {
@@ -154,8 +156,8 @@ function DashboardContent() {
       if (data.watchlist) {
         setWatchlist(data.watchlist);
       }
-    } catch {
-      // Ignore
+    } catch (e) {
+      console.error("Failed to load watchlist", e);
     } finally {
       setWatchlistLoading(false);
     }
@@ -164,52 +166,60 @@ function DashboardContent() {
   const handleAddSubreddit = async () => {
     if (!newSubName.trim()) return;
     try {
-      await fetch("/api/reddit/watchlist", {
+      const resp = await fetch("/api/reddit/watchlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "add",
           name: newSubName.trim(),
-          category: newSubCategory,
-          listing: "hot",
-          limit: 5,
+          category: newSubCategory.trim() || "General",
+          limit: 10,
         }),
       });
-      setNewSubName("");
-      loadWatchlist();
-    } catch {
-      // Ignore
-    }
-  };
-
-  const handleRemoveSubreddit = async (name: string) => {
-    try {
-      await fetch("/api/reddit/watchlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove", name }),
-      });
-      loadWatchlist();
-    } catch {
-      // Ignore
+      const data = await resp.json();
+      if (data.watchlist) {
+        setWatchlist(data.watchlist);
+        setNewSubName("");
+      }
+    } catch (e) {
+      console.error("Failed to add subreddit", e);
     }
   };
 
   const handleToggleSubreddit = async (name: string, currentEnabled: boolean) => {
     try {
-      await fetch("/api/reddit/watchlist", {
+      const resp = await fetch("/api/reddit/watchlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "toggle", name, enabled: !currentEnabled }),
+        body: JSON.stringify({
+          action: "update",
+          name,
+          enabled: !currentEnabled,
+        }),
       });
-      loadWatchlist();
-    } catch {
-      // Ignore
+      const data = await resp.json();
+      if (data.watchlist) setWatchlist(data.watchlist);
+    } catch (e) {
+      console.error("Failed to toggle subreddit", e);
+    }
+  };
+
+  const handleRemoveSubreddit = async (name: string) => {
+    try {
+      const resp = await fetch("/api/reddit/watchlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove", name }),
+      });
+      const data = await resp.json();
+      if (data.watchlist) setWatchlist(data.watchlist);
+    } catch (e) {
+      console.error("Failed to remove subreddit", e);
     }
   };
 
   // ==========================================
-  // 3. Substack Tracker State
+  // 3. Substack IMAP State
   // ==========================================
   const [gmailFolder, setGmailFolder] = useState<string>("INBOX");
   const [gmailLimit, setGmailLimit] = useState<number>(10);
@@ -227,15 +237,14 @@ function DashboardContent() {
         limit: String(gmailLimit),
         unreadOnly: String(gmailUnreadOnly),
       });
-
       const resp = await fetch(`/api/gmail?${params.toString()}`);
       const data: GmailQueryResult = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.error || `HTTP ${resp.status}`);
+        throw new Error(data.message || `HTTP ${resp.status}`);
       }
       setGmailResult(data);
     } catch (err) {
-      setGmailError(err instanceof Error ? err.message : "Error fetching Substack emails");
+      setGmailError(err instanceof Error ? err.message : "Error scanning Gmail IMAP");
     } finally {
       setGmailLoading(false);
     }
@@ -245,17 +254,18 @@ function DashboardContent() {
   // 4. OpenRouter Studio State
   // ==========================================
   const modelOptions = [
-    { label: "OpenRouter Free Router (Auto)", value: "openrouter/free" },
-    { label: "Gemini 2.0 Flash Experimental (Free)", value: "google/gemini-2.0-flash-exp:free" },
-    { label: "Llama 3.3 70B Instruct (Free)", value: "meta-llama/llama-3.3-70b-instruct:free" },
-    { label: "Mistral 7B Instruct (Free)", value: "mistralai/mistral-7b-instruct:free" },
-    { label: "Qwen 2.5 72B Instruct (Free)", value: "qwen/qwen-2.5-72b-instruct:free" },
+    { value: "anthropic/claude-3.7-sonnet", label: "Claude 3.7 Sonnet (Anthropic)" },
+    { value: "deepseek/deepseek-r1", label: "DeepSeek R1 Reasoning" },
+    { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B Instruct (Meta)" },
+    { value: "openai/gpt-4o", label: "GPT-4o Omnimodel (OpenAI)" },
+    { value: "google/gemini-2.0-flash", label: "Gemini 2.0 Flash (Google)" },
+    { value: "mistralai/mistral-large-2411", label: "Mistral Large 2411 (Mistral)" },
   ];
 
-  const [llmModel, setLlmModel] = useState<string>("openrouter/free");
+  const [llmModel, setLlmModel] = useState<string>("deepseek/deepseek-r1");
   const [customModel, setCustomModel] = useState<string>("");
   const [llmSystemPrompt, setLlmSystemPrompt] = useState<string>(
-    "You are the chief science & intelligence editor for The Daily Bugle. Provide crisp, technical, highly objective analysis without boilerplate."
+    "You are The Daily Bugle AI Editor. Synthesize input research into high-signal, punchy engineering briefs."
   );
   const [llmPrompt, setLlmPrompt] = useState<string>(
     "Synthesize the key recent breakthroughs in open-weights reasoning models and their implications for consumer inference."
@@ -319,32 +329,38 @@ function DashboardContent() {
   // Initial load
   useEffect(() => {
     loadWatchlist();
-    // Auto-fetch initial sample papers
     fetchArxiv();
     fetchReddit();
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090a0b] text-[#e4e4e7]">
+    <div className="min-h-screen flex flex-col bg-[#06080e] text-[#f1f5f9] selection:bg-indigo-500/30 selection:text-indigo-200 relative overflow-hidden">
+      {/* Ambient Aurora Top Glow */}
+      <div className="absolute top-0 left-0 right-0 h-[450px] aurora-hero pointer-events-none -z-10" />
+      <div className="absolute top-36 left-1/2 -translate-x-1/2 w-[700px] h-[350px] aurora-glow-center pointer-events-none -z-10 blur-3xl opacity-50" />
+
+      {/* Floating Glassmorphic Pill Header */}
       <Header />
 
-      {/* Command Center Control Bar */}
-      <div className="border-b border-[#22262d] bg-[#111317] px-4 py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          {/* Module Tabs */}
-          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+      {/* Command Center Modern Pill Tab Bar */}
+      <div className="pt-4 px-4 pb-2 max-w-6xl mx-auto w-full">
+        <div className="glass-nav rounded-2xl p-2 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
+          {/* Module Pill Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               onClick={() => setActiveTab("arxiv")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "arxiv"
-                  ? "bg-blue-600 text-white font-bold shadow-md shadow-blue-600/20"
-                  : "bg-[#181b20] text-zinc-300 hover:bg-[#22262e] border border-[#2b303a]"
+                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <Cpu className="w-4 h-4 text-blue-300" />
-              <span>arXiv Terminal</span>
+              <Cpu className="w-4 h-4 text-blue-400" />
+              <span>arXiv Wire</span>
               {arxivResult && (
-                <span className="px-1.5 py-0.2 bg-blue-900/60 rounded text-[10px] text-blue-200">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                  activeTab === "arxiv" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-blue-500/20 text-blue-300"
+                }`}>
                   {arxivResult.papers.length}
                 </span>
               )}
@@ -352,16 +368,18 @@ function DashboardContent() {
 
             <button
               onClick={() => setActiveTab("reddit")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "reddit"
-                  ? "bg-orange-600 text-white font-bold shadow-md shadow-orange-600/20"
-                  : "bg-[#181b20] text-zinc-300 hover:bg-[#22262e] border border-[#2b303a]"
+                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <Radio className="w-4 h-4 text-orange-300" />
+              <Radio className="w-4 h-4 text-orange-400" />
               <span>Reddit Watcher</span>
               {redditResult && (
-                <span className="px-1.5 py-0.2 bg-orange-900/60 rounded text-[10px] text-orange-200">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                  activeTab === "reddit" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-orange-500/20 text-orange-300"
+                }`}>
                   {redditResult.posts.length}
                 </span>
               )}
@@ -369,16 +387,18 @@ function DashboardContent() {
 
             <button
               onClick={() => setActiveTab("substack")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "substack"
-                  ? "bg-amber-600 text-white font-bold shadow-md shadow-amber-600/20"
-                  : "bg-[#181b20] text-zinc-300 hover:bg-[#22262e] border border-[#2b303a]"
+                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <Globe className="w-4 h-4 text-amber-300" />
-              <span>Substack Tracker</span>
+              <Globe className="w-4 h-4 text-amber-400" />
+              <span>Substack Radar</span>
               {gmailResult && (
-                <span className="px-1.5 py-0.2 bg-amber-900/60 rounded text-[10px] text-amber-200">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
+                  activeTab === "substack" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-amber-500/20 text-amber-300"
+                }`}>
                   {gmailResult.emails.length}
                 </span>
               )}
@@ -386,13 +406,13 @@ function DashboardContent() {
 
             <button
               onClick={() => setActiveTab("llm")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "llm"
-                  ? "bg-purple-600 text-white font-bold shadow-md shadow-purple-600/20"
-                  : "bg-[#181b20] text-zinc-300 hover:bg-[#22262e] border border-[#2b303a]"
+                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <Activity className="w-4 h-4 text-purple-300" />
+              <Activity className="w-4 h-4 text-purple-400" />
               <span>OpenRouter Studio</span>
             </button>
 
@@ -401,60 +421,72 @@ function DashboardContent() {
                 setActiveTab("snapshot");
                 if (!snapshotData) fetchSnapshot();
               }}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "snapshot"
-                  ? "bg-red-600 text-white font-bold shadow-md shadow-red-600/20"
-                  : "bg-[#181b20] text-zinc-300 hover:bg-[#22262e] border border-[#2b303a]"
+                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
               }`}
             >
-              <Layers className="w-4 h-4 text-red-300" />
+              <Layers className="w-4 h-4 text-indigo-400" />
               <span>Multi-Source Snapshot</span>
             </button>
           </div>
 
-          {/* Quick Trigger Snapshot */}
+          {/* Quick Refresh Action */}
           <button
             onClick={() => {
-              setActiveTab("snapshot");
-              fetchSnapshot();
+              if (activeTab === "arxiv") fetchArxiv();
+              else if (activeTab === "reddit") fetchReddit();
+              else if (activeTab === "substack") fetchGmail();
+              else if (activeTab === "llm") executeCompletion();
+              else fetchSnapshot();
             }}
-            disabled={snapshotLoading}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-[#1f2329] hover:bg-[#292f38] text-xs font-mono text-zinc-200 rounded-lg border border-[#303642] transition-all disabled:opacity-50"
+            disabled={arxivLoading || redditLoading || gmailLoading || llmLoading || snapshotLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 border border-white/10 transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${snapshotLoading ? "animate-spin text-red-400" : ""}`} />
-            <span>Parallel Snapshot</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${
+              arxivLoading || redditLoading || gmailLoading || llmLoading || snapshotLoading ? "animate-spin text-indigo-400" : "text-zinc-400"
+            }`} />
+            <span>Refresh Feed</span>
           </button>
         </div>
       </div>
 
       {/* Main Command Center Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-8">
         {/* ========================================================= */}
         {/* TAB 1: arXiv Terminal */}
         {/* ========================================================= */}
         {activeTab === "arxiv" && (
           <div className="space-y-6">
             {/* Query Controls Card */}
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#23272f] pb-3">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-5 h-5 text-blue-400" />
-                  <h3 className="text-base font-semibold font-mono text-zinc-100">
-                    arXiv Research Wire Terminal
-                  </h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-blue-950/60 text-blue-300 border border-blue-800/40 font-mono">
-                    166 Categories Supported
-                  </span>
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <Cpu className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">
+                      arXiv Research Wire
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-mono">
+                      Query 166 scientific taxonomy disciplines via Atom XML
+                    </p>
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-zinc-400">
-                  Target: <code className="text-blue-300">export.arxiv.org/api/query</code>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                    export.arxiv.org/api/query
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Discipline / Subject selector */}
-                <div className="md:col-span-4 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400 flex items-center gap-1">
+                <div className="md:col-span-4 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 flex items-center gap-1.5 uppercase tracking-wider">
                     <Filter className="w-3.5 h-3.5 text-blue-400" />
                     <span>Discipline / Subject</span>
                   </label>
@@ -466,10 +498,10 @@ function DashboardContent() {
                       const catKeys = Object.keys(getCategoriesBySubject(newSub));
                       if (catKeys.length > 0) setSelectedCategory(catKeys[0]);
                     }}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                   >
                     {subjects.map((sub) => (
-                      <option key={sub} value={sub}>
+                      <option key={sub} value={sub} className="bg-[#0b0e17] text-zinc-200">
                         {sub} ({Object.keys(getCategoriesBySubject(sub)).length})
                       </option>
                     ))}
@@ -477,17 +509,17 @@ function DashboardContent() {
                 </div>
 
                 {/* Specific Category selector */}
-                <div className="md:col-span-5 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">
+                <div className="md:col-span-5 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
                     Subcategory Code & Name
                   </label>
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500 truncate"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 truncate"
                   >
                     {Object.entries(getCategoriesBySubject(selectedSubject)).map(([cat, name]) => (
-                      <option key={cat} value={cat}>
+                      <option key={cat} value={cat} className="bg-[#0b0e17] text-zinc-200">
                         [{cat}] {name}
                       </option>
                     ))}
@@ -495,23 +527,23 @@ function DashboardContent() {
                 </div>
 
                 {/* Max Results */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Limit</label>
+                <div className="md:col-span-3 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Limit</label>
                   <select
                     value={arxivLimit}
                     onChange={(e) => setArxivLimit(Number(e.target.value))}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                   >
-                    <option value={5}>5 Papers</option>
-                    <option value={10}>10 Papers</option>
-                    <option value={20}>20 Papers</option>
-                    <option value={35}>35 Papers</option>
+                    <option value={5} className="bg-[#0b0e17]">5 Papers</option>
+                    <option value={10} className="bg-[#0b0e17]">10 Papers</option>
+                    <option value={20} className="bg-[#0b0e17]">20 Papers</option>
+                    <option value={35} className="bg-[#0b0e17]">35 Papers</option>
                   </select>
                 </div>
 
                 {/* Custom Search Query override */}
-                <div className="md:col-span-8 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">
+                <div className="md:col-span-8 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
                     Custom Query (Optional - overrides category dropdown)
                   </label>
                   <div className="relative">
@@ -520,30 +552,30 @@ function DashboardContent() {
                       placeholder="e.g. cat:cs.AI AND ti:reasoning OR quantum"
                       value={customArxivQuery}
                       onChange={(e) => setCustomArxivQuery(e.target.value)}
-                      className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg pl-9 pr-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 placeholder:text-zinc-600"
                     />
-                    <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+                    <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
                   </div>
                 </div>
 
                 {/* Sort By & Button */}
-                <div className="md:col-span-4 flex items-end gap-2">
-                  <div className="flex-1 space-y-1.5">
-                    <label className="text-xs font-mono text-zinc-400">Sort By</label>
+                <div className="md:col-span-4 flex items-end gap-3">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Sort By</label>
                     <select
                       value={arxivSortBy}
                       onChange={(e) => setArxivSortBy(e.target.value as any)}
-                      className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                     >
-                      <option value="submittedDate">Submitted Date</option>
-                      <option value="lastUpdatedDate">Last Updated</option>
-                      <option value="relevance">Relevance</option>
+                      <option value="submittedDate" className="bg-[#0b0e17]">Submitted Date</option>
+                      <option value="lastUpdatedDate" className="bg-[#0b0e17]">Last Updated</option>
+                      <option value="relevance" className="bg-[#0b0e17]">Relevance</option>
                     </select>
                   </div>
                   <button
                     onClick={fetchArxiv}
                     disabled={arxivLoading}
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 shadow-md shadow-blue-600/20 disabled:opacity-50 h-[34px]"
+                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-blue-600/25 disabled:opacity-50 h-[40px]"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${arxivLoading ? "animate-spin" : ""}`} />
                     <span>Fetch</span>
@@ -554,8 +586,8 @@ function DashboardContent() {
 
             {/* Error banner */}
             {arxivError && (
-              <div className="p-4 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
                 <span>{arxivError}</span>
               </div>
             )}
@@ -563,70 +595,72 @@ function DashboardContent() {
             {/* Papers List */}
             {arxivResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-1">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
                   <span>
                     Query executed: <code className="text-blue-300">{arxivResult.query}</code>
                   </span>
-                  <span>{arxivResult.papers.length} Papers Retrieved</span>
+                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                    {arxivResult.papers.length} Papers Retrieved
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
                   {arxivResult.papers.map((paper) => (
                     <article
                       key={paper.arxivId}
-                      className="p-5 rounded-xl border border-[#272b33] bg-[#121418] hover:border-[#373e4b] transition-all space-y-3"
+                      className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-blue-950/80 text-blue-300 border border-blue-800/40">
+                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-blue-500/10 text-blue-300 border border-blue-500/20">
                             {paper.primaryCategory} • {paper.primaryCategoryName}
                           </span>
-                          <span className="text-xs font-mono text-zinc-500">
+                          <span className="text-xs font-mono text-zinc-400">
                             ID: {paper.arxivId}
                           </span>
                         </div>
                         {paper.published && (
-                          <div className="flex items-center gap-1 text-xs font-mono text-zinc-400">
-                            <Clock className="w-3 h-3 text-zinc-500" />
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
                             <span>{new Date(paper.published).toLocaleDateString()}</span>
                           </div>
                         )}
                       </div>
 
-                      <h4 className="text-lg font-serif font-bold text-zinc-100 leading-snug">
+                      <h4 className="text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-blue-300 transition-colors cursor-pointer">
                         {paper.title}
                       </h4>
 
                       <p className="text-xs font-mono text-zinc-400">
                         Authors:{" "}
-                        <span className="text-zinc-300">
+                        <span className="text-zinc-200">
                           {paper.authors.slice(0, 5).join(", ")}
                           {paper.authors.length > 5 && ` (+${paper.authors.length - 5} more)`}
                         </span>
                       </p>
 
-                      <p className="text-xs font-serif text-zinc-300 leading-relaxed line-clamp-4 hover:line-clamp-none transition-all cursor-pointer bg-[#0a0c0e] p-3 rounded-lg border border-[#20232a]">
+                      <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
                         {paper.abstract}
-                      </p>
+                      </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1f232a]">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06]">
                         <div className="flex flex-wrap gap-1.5">
                           {paper.categories.slice(0, 4).map((c) => (
                             <span
                               key={c}
-                              className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400"
+                              className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]"
                             >
                               {c}
                             </span>
                           ))}
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs font-mono">
+                        <div className="flex items-center gap-2 text-xs font-medium">
                           <a
                             href={paper.links.abstract}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 rounded bg-[#1f2329] hover:bg-[#282e36] text-zinc-300 hover:text-white transition-all flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white transition-all flex items-center gap-1 border border-white/10"
                           >
                             <span>Abstract</span>
                             <ExternalLink className="w-3 h-3" />
@@ -635,7 +669,7 @@ function DashboardContent() {
                             href={paper.links.pdf}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 rounded bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/40 transition-all flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 transition-all flex items-center gap-1 font-semibold"
                           >
                             <span>PDF</span>
                             <ExternalLink className="w-3 h-3" />
@@ -644,7 +678,7 @@ function DashboardContent() {
                             href={paper.links.html}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 rounded bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/40 transition-all flex items-center gap-1 font-semibold"
+                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 font-semibold"
                           >
                             <span>HTML View</span>
                             <ExternalLink className="w-3 h-3" />
@@ -686,25 +720,32 @@ function DashboardContent() {
         {activeTab === "reddit" && (
           <div className="space-y-6">
             {/* Reddit Controls Card */}
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#23272f] pb-3">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-orange-400" />
-                  <h3 className="text-base font-semibold font-mono text-zinc-100">
-                    Unofficial Reddit Community Crawler
-                  </h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 font-mono">
-                    Zero-Auth Public RSS
-                  </span>
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center">
+                    <Radio className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">
+                      Reddit Community Watcher
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-mono">
+                      Zero-Auth Public RSS stream with dual-tier disk caching
+                    </p>
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-zinc-400">
-                  Politeness Throttle: <code className="text-orange-300">2.5s</code> • In-Memory TTL: <code className="text-orange-300">60s</code>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    Throttle: 2.5s • Cache: 60s
+                  </span>
                 </div>
               </div>
 
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono text-zinc-500 mr-1">Curated:</span>
+                <span className="text-xs font-mono text-zinc-400 mr-1 uppercase tracking-wider">Curated:</span>
                 {curatedSubreddits.map((sub) => (
                   <button
                     key={sub}
@@ -712,10 +753,10 @@ function DashboardContent() {
                       setSubredditInput(sub);
                       fetchReddit(sub);
                     }}
-                    className={`px-2.5 py-1 text-xs font-mono rounded-md border transition-all ${
+                    className={`px-3 py-1 rounded-full text-xs font-mono transition-all ${
                       subredditInput.toLowerCase() === sub.toLowerCase()
-                        ? "bg-orange-950/60 border-orange-600 text-orange-300 font-bold"
-                        : "bg-[#181b20] border-[#292e37] text-zinc-400 hover:text-zinc-200"
+                        ? "bg-orange-500/20 border border-orange-500/40 text-orange-200 font-bold shadow-md shadow-orange-500/10"
+                        : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08]"
                     }`}
                   >
                     r/{sub}
@@ -724,61 +765,61 @@ function DashboardContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                {/* Subreddit Input with alias detection */}
-                <div className="md:col-span-5 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Target Subreddit</label>
+                {/* Subreddit Input */}
+                <div className="md:col-span-5 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Target Subreddit</label>
                   <input
                     type="text"
                     value={subredditInput}
                     onChange={(e) => setSubredditInput(e.target.value)}
                     placeholder="e.g. LocalLLaMA or MachineLearning"
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                   />
                 </div>
 
                 {/* Listing */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Feed Listing</label>
+                <div className="md:col-span-3 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Feed Listing</label>
                   <select
                     value={redditListing}
                     onChange={(e) => setRedditListing(e.target.value as any)}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                   >
-                    <option value="hot">Hot (Trending)</option>
-                    <option value="new">New (Chronological)</option>
-                    <option value="top">Top (Highest Voted)</option>
-                    <option value="rising">Rising (Gaining Momentum)</option>
+                    <option value="hot" className="bg-[#0b0e17]">Hot (Trending)</option>
+                    <option value="new" className="bg-[#0b0e17]">New (Chronological)</option>
+                    <option value="top" className="bg-[#0b0e17]">Top (Highest Voted)</option>
+                    <option value="rising" className="bg-[#0b0e17]">Rising (Gaining)</option>
                   </select>
                 </div>
 
                 {/* Time filter (if top) or Limit */}
                 {redditListing === "top" ? (
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-xs font-mono text-zinc-400">Time Window</label>
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Time Window</label>
                     <select
                       value={redditTimeFilter}
                       onChange={(e) => setRedditTimeFilter(e.target.value)}
-                      className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                     >
-                      <option value="day">Past 24 Hours</option>
-                      <option value="week">Past Week</option>
-                      <option value="month">Past Month</option>
-                      <option value="year">Past Year</option>
-                      <option value="all">All Time</option>
+                      <option value="day" className="bg-[#0b0e17]">Past 24 Hours</option>
+                      <option value="week" className="bg-[#0b0e17]">Past Week</option>
+                      <option value="month" className="bg-[#0b0e17]">Past Month</option>
+                      <option value="year" className="bg-[#0b0e17]">Past Year</option>
+                      <option value="all" className="bg-[#0b0e17]">All Time</option>
                     </select>
                   </div>
                 ) : (
-                  <div className="md:col-span-2 space-y-1.5">
-                    <label className="text-xs font-mono text-zinc-400">Limit</label>
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Limit</label>
                     <select
                       value={redditLimit}
                       onChange={(e) => setRedditLimit(Number(e.target.value))}
-                      className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                     >
-                      <option value={5}>5 Posts</option>
-                      <option value={10}>10 Posts</option>
-                      <option value={15}>15 Posts</option>
-                      <option value={25}>25 Posts</option>
+                      <option value={5} className="bg-[#0b0e17]">5 Posts</option>
+                      <option value={10} className="bg-[#0b0e17]">10 Posts</option>
+                      <option value={15} className="bg-[#0b0e17]">15 Posts</option>
+                      <option value={25} className="bg-[#0b0e17]">25 Posts</option>
                     </select>
                   </div>
                 )}
@@ -788,7 +829,7 @@ function DashboardContent() {
                   <button
                     onClick={() => fetchReddit()}
                     disabled={redditLoading}
-                    className="w-full h-[34px] bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md shadow-orange-600/20 disabled:opacity-50"
+                    className="w-full h-[40px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-600/25 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${redditLoading ? "animate-spin" : ""}`} />
                     <span>Crawl</span>
@@ -798,11 +839,11 @@ function DashboardContent() {
             </div>
 
             {/* Watchlist Manager Panel */}
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-4">
-              <div className="flex items-center justify-between border-b border-[#23272f] pb-3">
+            <div className="glass-card rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                 <div className="flex items-center gap-2">
                   <Sliders className="w-4 h-4 text-orange-400" />
-                  <h4 className="text-sm font-mono font-bold text-zinc-200">
+                  <h4 className="text-sm font-semibold text-zinc-200">
                     Watchlist Manager (Seen-Post Deduplication Active)
                   </h4>
                 </div>
@@ -824,9 +865,9 @@ function DashboardContent() {
                       setRedditLoading(false);
                     }
                   }}
-                  className="px-3 py-1 bg-[#1f2329] hover:bg-[#282e36] text-xs font-mono text-zinc-200 rounded border border-[#303642] transition-all flex items-center gap-1"
+                  className="px-3.5 py-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-xs font-mono text-zinc-200 rounded-full border border-white/10 transition-all flex items-center gap-1.5"
                 >
-                  <Eye className="w-3 h-3 text-orange-400" />
+                  <Eye className="w-3.5 h-3.5 text-orange-400" />
                   <span>Poll New Unseen</span>
                 </button>
               </div>
@@ -838,18 +879,18 @@ function DashboardContent() {
                   placeholder="Subreddit (e.g. singularity)"
                   value={newSubName}
                   onChange={(e) => setNewSubName(e.target.value)}
-                  className="bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                  className="bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <input
                   type="text"
                   placeholder="Category label"
                   value={newSubCategory}
                   onChange={(e) => setNewSubCategory(e.target.value)}
-                  className="bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-200 focus:outline-none focus:border-orange-500"
+                  className="bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <button
                   onClick={handleAddSubreddit}
-                  className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white font-mono text-xs font-semibold rounded-lg flex items-center gap-1"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs rounded-xl flex items-center gap-1.5 shadow-md shadow-orange-600/20"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add To Watchlist</span>
@@ -857,30 +898,30 @@ function DashboardContent() {
               </div>
 
               {/* Watchlist items */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
                 {watchlist.map((sub) => (
                   <div
                     key={sub.name}
-                    className="p-2.5 rounded-lg border border-[#242730] bg-[#0c0e11] flex items-center justify-between text-xs font-mono"
+                    className="p-3.5 rounded-2xl border border-white/[0.06] bg-black/20 flex items-center justify-between text-xs font-mono"
                   >
                     <div>
                       <div className="font-bold text-zinc-200">{sub.displayName || `r/${sub.name}`}</div>
-                      <div className="text-[11px] text-zinc-500">{sub.category} • limit: {sub.limit}</div>
+                      <div className="text-[11px] text-zinc-400">{sub.category} • limit: {sub.limit}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleToggleSubreddit(sub.name, sub.enabled)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all ${
                           sub.enabled
-                            ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/40"
-                            : "bg-zinc-800 text-zinc-400"
+                            ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                            : "bg-white/[0.05] text-zinc-400"
                         }`}
                       >
                         {sub.enabled ? "Active" : "Disabled"}
                       </button>
                       <button
                         onClick={() => handleRemoveSubreddit(sub.name)}
-                        className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
+                        className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
                         title="Remove Subreddit"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -893,8 +934,8 @@ function DashboardContent() {
 
             {/* Error Banner */}
             {redditError && (
-              <div className="p-4 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
                 <span>{redditError}</span>
               </div>
             )}
@@ -902,66 +943,68 @@ function DashboardContent() {
             {/* Posts List */}
             {redditResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-1">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
                   <span>
                     Stream: <code className="text-orange-300">{redditResult.subreddit}</code> ({redditResult.listing})
                   </span>
-                  <span>{redditResult.posts.length} Posts Extracted</span>
+                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                    {redditResult.posts.length} Posts Extracted
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
                   {redditResult.posts.map((post) => (
                     <article
                       key={post.id}
-                      className="p-5 rounded-xl border border-[#272b33] bg-[#121418] hover:border-[#373e4b] transition-all space-y-3"
+                      className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-orange-950/80 text-orange-300 border border-orange-800/40">
+                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-orange-500/10 text-orange-300 border border-orange-500/20">
                             {post.subreddit}
                           </span>
-                          <span className="text-xs font-mono text-zinc-500">
+                          <span className="text-xs font-mono text-zinc-400">
                             Author: {post.author}
                           </span>
                         </div>
                         {post.publishedAt && (
-                          <div className="flex items-center gap-1 text-xs font-mono text-zinc-400">
-                            <Clock className="w-3 h-3 text-zinc-500" />
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
                             <span>{new Date(post.publishedAt).toLocaleString()}</span>
                           </div>
                         )}
                       </div>
 
-                      <h4 className="text-base sm:text-lg font-serif font-bold text-zinc-100 leading-snug">
+                      <h4 className="text-base sm:text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-orange-300 transition-colors cursor-pointer">
                         {post.title}
                       </h4>
 
                       {post.contentText && (
-                        <p className="text-xs font-serif text-zinc-300 leading-relaxed bg-[#0a0c0e] p-3 rounded-lg border border-[#20232a] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
+                        <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
                           {post.contentText}
-                        </p>
+                        </div>
                       )}
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1f232a] text-xs font-mono">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06] text-xs font-mono">
                         {post.externalUrl && post.externalUrl !== post.permalink ? (
                           <a
                             href={post.externalUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 rounded bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/40 transition-all flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5"
                           >
                             <span>Linked Article</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : (
-                          <span className="text-zinc-600">Text Submission</span>
+                          <span className="text-zinc-400">Text Submission</span>
                         )}
 
                         <a
                           href={post.permalink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2.5 py-1 rounded bg-[#1f2329] hover:bg-[#282e36] text-zinc-300 hover:text-white transition-all flex items-center gap-1"
+                          className="px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 border border-white/10"
                         >
                           <span>Reddit Discussion</span>
                           <ExternalLink className="w-3 h-3" />
@@ -1002,57 +1045,64 @@ function DashboardContent() {
         {activeTab === "substack" && (
           <div className="space-y-6">
             {/* Substack Controls Card */}
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#23272f] pb-3">
-                <div className="flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-base font-semibold font-mono text-zinc-100">
-                    Substack Newsletter IMAP Tracker
-                  </h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/40 font-mono">
-                    Node TLS IMAP
-                  </span>
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">
+                      Substack Newsletter Radar
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-mono">
+                      TLS IMAP direct connection with canonical web link extraction
+                    </p>
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-zinc-400">
-                  Host: <code className="text-amber-300">imap.gmail.com:993</code>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                    Host: imap.gmail.com:993
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Folder input */}
-                <div className="md:col-span-4 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Mailbox Folder</label>
+                <div className="md:col-span-4 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Mailbox Folder</label>
                   <input
                     type="text"
                     value={gmailFolder}
                     onChange={(e) => setGmailFolder(e.target.value)}
                     placeholder="INBOX"
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
                   />
                 </div>
 
                 {/* Limit */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Max Issues</label>
+                <div className="md:col-span-3 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Max Issues</label>
                   <select
                     value={gmailLimit}
                     onChange={(e) => setGmailLimit(Number(e.target.value))}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
                   >
-                    <option value={5}>5 Newsletters</option>
-                    <option value={10}>10 Newsletters</option>
-                    <option value={20}>20 Newsletters</option>
+                    <option value={5} className="bg-[#0b0e17]">5 Newsletters</option>
+                    <option value={10} className="bg-[#0b0e17]">10 Newsletters</option>
+                    <option value={20} className="bg-[#0b0e17]">20 Newsletters</option>
                   </select>
                 </div>
 
                 {/* Unread Only Toggle */}
                 <div className="md:col-span-3 flex items-center pt-6">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-mono text-zinc-300">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-mono text-zinc-300">
                     <input
                       type="checkbox"
                       checked={gmailUnreadOnly}
                       onChange={(e) => setGmailUnreadOnly(e.target.checked)}
-                      className="rounded border-[#2c313a] bg-[#0c0d10] text-amber-500 focus:ring-amber-500/20"
+                      className="rounded border-white/20 bg-white/[0.05] text-amber-500 focus:ring-amber-500/20"
                     />
                     <span>Unread (UNSEEN) Only</span>
                   </label>
@@ -1063,7 +1113,7 @@ function DashboardContent() {
                   <button
                     onClick={fetchGmail}
                     disabled={gmailLoading}
-                    className="w-full h-[34px] bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20 disabled:opacity-50"
+                    className="w-full h-[40px] bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${gmailLoading ? "animate-spin" : ""}`} />
                     <span>Scan IMAP</span>
@@ -1074,20 +1124,20 @@ function DashboardContent() {
 
             {/* Error or Notice Banner */}
             {gmailError && (
-              <div className="p-4 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
                 <span>{gmailError}</span>
               </div>
             )}
 
             {gmailResult && gmailResult.configured === false && (
-              <div className="p-4 rounded-lg bg-amber-950/40 border border-amber-800/40 text-amber-200 text-xs font-mono space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
+              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs font-mono space-y-2">
+                <div className="font-bold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-400" />
-                  <span>Gmail Credentials Required</span>
+                  <span>Gmail Credentials Required For Live Fetch</span>
                 </div>
-                <p className="text-zinc-400">
-                  Configure <code className="text-amber-300">GMAIL_USER</code> and <code className="text-amber-300">GMAIL_APP_PASSWORD</code> in <code className="text-zinc-200">.env.local</code> to fetch live Substack newsletters directly from your inbox.
+                <p className="text-zinc-300 leading-relaxed">
+                  Configure <code className="text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">GMAIL_USER</code> and <code className="text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">GMAIL_APP_PASSWORD</code> in <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">.env.local</code> to fetch live Substack newsletters directly from your inbox.
                 </p>
               </div>
             )}
@@ -1095,13 +1145,15 @@ function DashboardContent() {
             {/* Emails List */}
             {gmailResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-1">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
                   <span>Folder: <code className="text-amber-300">{gmailResult.folder}</code></span>
-                  <span>{gmailResult.emails.length} Issues Retrieved</span>
+                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                    {gmailResult.emails.length} Issues Retrieved
+                  </span>
                 </div>
 
                 {gmailResult.emails.length === 0 ? (
-                  <div className="p-8 rounded-xl border border-[#272b33] bg-[#121418] text-center text-zinc-500 text-xs font-mono">
+                  <div className="p-8 rounded-2xl border border-white/[0.08] bg-black/20 text-center text-zinc-400 text-xs font-mono">
                     No Substack emails found in this mailbox query. Try selecting all messages or verify Substack subscriptions.
                   </div>
                 ) : (
@@ -1109,35 +1161,35 @@ function DashboardContent() {
                     {gmailResult.emails.map((item) => (
                       <article
                         key={item.id}
-                        className="p-5 rounded-xl border border-[#272b33] bg-[#121418] hover:border-[#373e4b] transition-all space-y-3"
+                        className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-950/80 text-amber-300 border border-amber-800/40 font-semibold">
+                            <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
                               {item.senderName || item.sender}
                             </span>
-                            <span className="text-xs font-mono text-zinc-500">
+                            <span className="text-xs font-mono text-zinc-400">
                               UID: {item.id}
                             </span>
                           </div>
                           {item.date && (
-                            <div className="flex items-center gap-1 text-xs font-mono text-zinc-400">
-                              <Clock className="w-3 h-3 text-zinc-500" />
+                            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
+                              <Clock className="w-3.5 h-3.5 text-zinc-500" />
                               <span>{new Date(item.date).toLocaleString()}</span>
                             </div>
                           )}
                         </div>
 
-                        <h4 className="text-lg font-serif font-bold text-zinc-100 leading-snug">
+                        <h4 className="text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-amber-300 transition-colors cursor-pointer">
                           {item.subject}
                         </h4>
 
-                        <p className="text-xs font-serif text-zinc-300 leading-relaxed bg-[#0a0c0e] p-3 rounded-lg border border-[#20232a] line-clamp-4 hover:line-clamp-none transition-all cursor-pointer">
+                        <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-4 hover:line-clamp-none transition-all cursor-pointer">
                           {item.bodyText}
-                        </p>
+                        </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#1f232a] text-xs font-mono">
-                          <div className="text-zinc-500">
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06] text-xs font-mono">
+                          <div className="text-zinc-400">
                             {item.links.length} hyperlinks identified
                           </div>
 
@@ -1146,13 +1198,13 @@ function DashboardContent() {
                               href={item.webUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded font-semibold transition-all flex items-center gap-1 shadow-sm"
+                              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-full font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20"
                             >
                               <span>Read Post on Substack</span>
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           ) : (
-                            <span className="text-zinc-600">No direct Substack slug link</span>
+                            <span className="text-zinc-400">No direct Substack slug link</span>
                           )}
                         </div>
                       </article>
@@ -1191,33 +1243,40 @@ function DashboardContent() {
         {activeTab === "llm" && (
           <div className="space-y-6">
             {/* LLM Controls Card */}
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#23272f] pb-3">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-400" />
-                  <h3 className="text-base font-semibold font-mono text-zinc-100">
-                    OpenRouter LLM Router Studio
-                  </h3>
-                  <span className="text-xs px-2 py-0.5 rounded bg-purple-950/60 text-purple-300 border border-purple-800/40 font-mono">
-                    Token Inspection Active
-                  </span>
+            <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">
+                      OpenRouter Studio
+                    </h3>
+                    <p className="text-xs text-zinc-400 font-mono">
+                      Multi-model completions with real-time prompt & completion token counters
+                    </p>
+                  </div>
                 </div>
-                <div className="text-xs font-mono text-zinc-400">
-                  Endpoint: <code className="text-purple-300">openrouter.ai/api/v1</code>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                    openrouter.ai/api/v1
+                  </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Model Selector */}
-                <div className="md:col-span-6 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Model Selector</label>
+                <div className="md:col-span-6 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Model Selector</label>
                   <select
                     value={llmModel}
                     onChange={(e) => setLlmModel(e.target.value)}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   >
                     {modelOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
+                      <option key={opt.value} value={opt.value} className="bg-[#0b0e17] text-zinc-200">
                         {opt.label}
                       </option>
                     ))}
@@ -1225,23 +1284,23 @@ function DashboardContent() {
                 </div>
 
                 {/* Custom Model String */}
-                <div className="md:col-span-6 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">
-                    Custom Model (Optional - e.g. anthropic/claude-3.5-sonnet)
+                <div className="md:col-span-6 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
+                    Custom Model (Optional)
                   </label>
                   <input
                     type="text"
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
                     placeholder="Overrides dropdown if provided"
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 placeholder:text-zinc-600"
                   />
                 </div>
 
                 {/* Temperature & Max Tokens */}
-                <div className="md:col-span-6 space-y-1.5">
+                <div className="md:col-span-6 space-y-2">
                   <div className="flex justify-between text-xs font-mono text-zinc-400">
-                    <span>Temperature</span>
+                    <span>TEMPERATURE</span>
                     <span className="text-purple-300 font-bold">{llmTemperature}</span>
                   </div>
                   <input
@@ -1255,31 +1314,31 @@ function DashboardContent() {
                   />
                 </div>
 
-                <div className="md:col-span-6 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">Max Tokens</label>
+                <div className="md:col-span-6 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Max Tokens</label>
                   <input
                     type="number"
                     value={llmMaxTokens}
                     onChange={(e) => setLlmMaxTokens(Number(e.target.value))}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
                 {/* System Prompt */}
-                <div className="md:col-span-12 space-y-1.5">
-                  <label className="text-xs font-mono text-zinc-400">System Instruction</label>
+                <div className="md:col-span-12 space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">System Instruction</label>
                   <textarea
                     rows={2}
                     value={llmSystemPrompt}
                     onChange={(e) => setLlmSystemPrompt(e.target.value)}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
                 {/* User Prompt */}
-                <div className="md:col-span-12 space-y-1.5">
+                <div className="md:col-span-12 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-mono text-zinc-400">Prompt / Digest Input</label>
+                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Prompt / Digest Input</label>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
@@ -1288,10 +1347,10 @@ function DashboardContent() {
                               .slice(0, 5)
                               .map((p) => `- [${p.primaryCategory}] ${p.title}\n  Abstract: ${p.abstract.slice(0, 150)}...`)
                               .join("\n\n");
-                            setLlmPrompt(`Format an authoritative newsletter edition based on these latest arXiv research papers:\n\n${summary}`);
+                            setLlmPrompt(`Format an authoritative digest based on these latest arXiv research papers:\n\n${summary}`);
                           }
                         }}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1f2329] hover:bg-[#282e36] text-blue-300"
+                        className="text-[11px] font-mono px-3 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 transition-all"
                       >
                         + Insert arXiv Digest Context
                       </button>
@@ -1301,7 +1360,7 @@ function DashboardContent() {
                     rows={4}
                     value={llmPrompt}
                     onChange={(e) => setLlmPrompt(e.target.value)}
-                    className="w-full bg-[#0c0d10] border border-[#282d36] rounded-lg p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
@@ -1310,7 +1369,7 @@ function DashboardContent() {
                   <button
                     onClick={executeCompletion}
                     disabled={llmLoading || !llmPrompt.trim()}
-                    className="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-semibold rounded-lg transition-all flex items-center gap-2 shadow-md shadow-purple-600/20 disabled:opacity-50"
+                    className="px-7 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-50"
                   >
                     <Send className={`w-3.5 h-3.5 ${llmLoading ? "animate-pulse" : ""}`} />
                     <span>{llmLoading ? "Synthesizing..." : "Execute Completion"}</span>
@@ -1321,8 +1380,8 @@ function DashboardContent() {
 
             {/* Error Banner */}
             {llmError && (
-              <div className="p-4 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
                 <span>{llmError}</span>
               </div>
             )}
@@ -1333,21 +1392,21 @@ function DashboardContent() {
                 {/* Token usage badges */}
                 {llmResponse.usage && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-[#121418] border border-[#272b33] text-center">
-                      <div className="text-[10px] font-mono text-zinc-500 uppercase">Prompt Tokens</div>
-                      <div className="text-lg font-mono font-bold text-zinc-100">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Prompt Tokens</div>
+                      <div className="text-xl font-mono font-bold text-zinc-100 mt-1">
                         {llmResponse.usage.prompt_tokens ?? llmResponse.usage.promptTokens ?? 0}
                       </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-[#121418] border border-[#272b33] text-center">
-                      <div className="text-[10px] font-mono text-zinc-500 uppercase">Completion Tokens</div>
-                      <div className="text-lg font-mono font-bold text-purple-400">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Completion Tokens</div>
+                      <div className="text-xl font-mono font-bold text-purple-400 mt-1">
                         {llmResponse.usage.completion_tokens ?? llmResponse.usage.completionTokens ?? 0}
                       </div>
                     </div>
-                    <div className="p-3 rounded-lg bg-[#121418] border border-[#272b33] text-center">
-                      <div className="text-[10px] font-mono text-zinc-500 uppercase">Total Tokens</div>
-                      <div className="text-lg font-mono font-bold text-emerald-400">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Total Tokens</div>
+                      <div className="text-xl font-mono font-bold text-emerald-400 mt-1">
                         {llmResponse.usage.total_tokens ?? llmResponse.usage.totalTokens ?? 0}
                       </div>
                     </div>
@@ -1355,17 +1414,17 @@ function DashboardContent() {
                 )}
 
                 {/* Content Box */}
-                <div className="p-6 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#23272f] pb-2 text-xs font-mono text-zinc-400">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 border border-white/[0.08]">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 text-xs font-mono text-zinc-400">
+                    <span className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-400" />
                       Model: <code className="text-purple-300 font-bold">{llmResponse.model}</code>
                     </span>
                     {llmResponse.finishReason && (
-                      <span className="text-zinc-500">Finish: {llmResponse.finishReason}</span>
+                      <span className="text-zinc-400">Finish: {llmResponse.finishReason}</span>
                     )}
                   </div>
-                  <div className="prose prose-invert max-w-none text-sm font-serif leading-relaxed text-zinc-200 whitespace-pre-wrap">
+                  <div className="prose prose-invert max-w-none text-sm font-sans leading-relaxed text-zinc-200 whitespace-pre-wrap">
                     {llmResponse.content}
                   </div>
                 </div>
@@ -1394,13 +1453,13 @@ function DashboardContent() {
         {/* ========================================================= */}
         {activeTab === "snapshot" && (
           <div className="space-y-6">
-            <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] shadow-lg flex flex-wrap items-center justify-between gap-4">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border border-white/10">
               <div>
-                <h3 className="text-base font-semibold font-mono text-zinc-100 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-red-500" />
+                <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2.5">
+                  <Layers className="w-5 h-5 text-indigo-400" />
                   <span>Consolidated Multi-Source Intelligence Snapshot</span>
                 </h3>
-                <p className="text-xs font-serif text-zinc-400 mt-1">
+                <p className="text-xs text-zinc-400 mt-1">
                   Triggers concurrent polling across arXiv preprints, zero-auth Reddit feeds, and Gmail Substack newsletters.
                 </p>
               </div>
@@ -1408,16 +1467,16 @@ function DashboardContent() {
               <button
                 onClick={fetchSnapshot}
                 disabled={snapshotLoading}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-semibold rounded-lg transition-all flex items-center gap-2 shadow-md shadow-red-600/20 disabled:opacity-50"
+                className="btn-white-pill rounded-full px-6 py-3 text-xs font-semibold flex items-center gap-2 shadow-xl disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 ${snapshotLoading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${snapshotLoading ? "animate-spin" : ""}`} />
                 <span>{snapshotLoading ? "Gathering Streams..." : "Refresh Snapshot"}</span>
               </button>
             </div>
 
             {snapshotError && (
-              <div className="p-4 rounded-lg bg-red-950/50 border border-red-800 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
                 <span>{snapshotError}</span>
               </div>
             )}
@@ -1426,66 +1485,66 @@ function DashboardContent() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Column 1: arXiv Snapshot */}
-                  <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] space-y-3">
-                    <div className="flex items-center justify-between border-b border-[#23272f] pb-2">
-                      <span className="text-xs font-mono font-bold text-blue-400 flex items-center gap-1.5">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-blue-400 flex items-center gap-2">
                         <Cpu className="w-4 h-4" />
                         arXiv Feed
                       </span>
-                      <span className="text-[11px] font-mono text-zinc-500">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
                         {snapshotData.arxiv?.papers?.length || 0} papers
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.arxiv?.papers?.map((p: any) => (
-                        <div key={p.arxivId} className="p-2.5 rounded bg-[#0b0d10] border border-[#20232a] text-xs">
-                          <div className="font-serif font-bold text-zinc-200 line-clamp-2">{p.title}</div>
-                          <div className="text-[10px] font-mono text-blue-400 mt-1">{p.primaryCategory}</div>
+                        <div key={p.arxivId} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{p.title}</div>
+                          <div className="text-[10px] font-mono text-blue-400 mt-1.5">{p.primaryCategory}</div>
                         </div>
                       )) || <div className="text-zinc-500 text-xs font-mono">No papers loaded</div>}
                     </div>
                   </div>
 
                   {/* Column 2: Reddit Snapshot */}
-                  <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] space-y-3">
-                    <div className="flex items-center justify-between border-b border-[#23272f] pb-2">
-                      <span className="text-xs font-mono font-bold text-orange-400 flex items-center gap-1.5">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-orange-400 flex items-center gap-2">
                         <Radio className="w-4 h-4" />
                         Reddit Watcher
                       </span>
-                      <span className="text-[11px] font-mono text-zinc-500">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300 border border-orange-500/20">
                         {snapshotData.reddit?.posts?.length || 0} posts
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.reddit?.posts?.map((post: any) => (
-                        <div key={post.id} className="p-2.5 rounded bg-[#0b0d10] border border-[#20232a] text-xs">
-                          <div className="font-serif font-bold text-zinc-200 line-clamp-2">{post.title}</div>
-                          <div className="text-[10px] font-mono text-orange-400 mt-1">{post.subreddit} • by {post.author}</div>
+                        <div key={post.id} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{post.title}</div>
+                          <div className="text-[10px] font-mono text-orange-400 mt-1.5">{post.subreddit} • by {post.author}</div>
                         </div>
                       )) || <div className="text-zinc-500 text-xs font-mono">No posts loaded</div>}
                     </div>
                   </div>
 
                   {/* Column 3: Gmail Snapshot */}
-                  <div className="p-5 rounded-xl border border-[#272b33] bg-[#121418] space-y-3">
-                    <div className="flex items-center justify-between border-b border-[#23272f] pb-2">
-                      <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-1.5">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-2">
                         <Globe className="w-4 h-4" />
-                        Substack In-Box
+                        Substack Radar
                       </span>
-                      <span className="text-[11px] font-mono text-zinc-500">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
                         {snapshotData.gmail?.emails?.length || 0} issues
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.gmail?.emails?.map((email: any) => (
-                        <div key={email.id} className="p-2.5 rounded bg-[#0b0d10] border border-[#20232a] text-xs">
-                          <div className="font-serif font-bold text-zinc-200 line-clamp-2">{email.subject}</div>
-                          <div className="text-[10px] font-mono text-amber-400 mt-1">{email.senderName || email.sender}</div>
+                        <div key={email.id} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{email.subject}</div>
+                          <div className="text-[10px] font-mono text-amber-400 mt-1.5">{email.senderName || email.sender}</div>
                         </div>
                       )) || (
                         <div className="text-zinc-500 text-xs font-mono p-2">
@@ -1523,7 +1582,7 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#090a0b] flex items-center justify-center text-xs font-mono text-zinc-400">
+        <div className="min-h-screen bg-[#06080e] flex items-center justify-center text-xs font-mono text-zinc-400">
           Loading Command Center...
         </div>
       }

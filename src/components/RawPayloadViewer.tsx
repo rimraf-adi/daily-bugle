@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, ChevronDown, ChevronUp, Code2, FileText, Database } from "lucide-react";
+import { Copy, Check, ChevronDown, ChevronUp, Code2, FileText, Database, Sparkles } from "lucide-react";
 
 interface TabItem {
   id: string;
@@ -45,31 +45,33 @@ export function RawPayloadViewer({
   const formattedSize = byteCount > 1024 ? `${(byteCount / 1024).toFixed(1)} KB` : `${byteCount} B`;
 
   return (
-    <div className="rounded-lg border border-[#272a30] bg-[#0e1013] overflow-hidden shadow-xl transition-all">
+    <div className="rounded-2xl border border-white/10 bg-[#090c14]/90 backdrop-blur-xl overflow-hidden shadow-2xl transition-all">
       {/* Header bar */}
-      <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-[#14171c] border-b border-[#272a30] gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300 font-mono">
-            {title}
-          </span>
-          <span className="text-[11px] text-zinc-500 font-mono">
-            ({lineCount} lines • {formattedSize})
+      <div className="flex flex-wrap items-center justify-between px-5 py-3 bg-white/[0.02] border-b border-white/[0.08] gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-200 font-mono">
+              {title}
+            </span>
+          </div>
+          <span className="text-[11px] text-zinc-400 font-mono bg-white/[0.04] px-2 py-0.5 rounded-full border border-white/[0.06]">
+            {lineCount} lines • {formattedSize}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Tab buttons */}
-          <div className="flex items-center bg-[#090a0b] rounded p-0.5 border border-[#272a30]">
+          <div className="flex items-center bg-black/40 rounded-full p-0.5 border border-white/10">
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded transition-all font-mono ${
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-full transition-all font-mono ${
                     isActive
-                      ? "bg-[#272a30] text-zinc-100 font-medium shadow-sm"
+                      ? "bg-white/15 text-white font-medium shadow-sm"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
@@ -78,7 +80,7 @@ export function RawPayloadViewer({
                   {tab.language === "text" && <FileText className="w-3 h-3 text-emerald-400" />}
                   <span>{tab.label}</span>
                   {tab.badge && (
-                    <span className="text-[10px] px-1 bg-zinc-800 rounded text-zinc-400">
+                    <span className="text-[10px] px-1.5 py-0.2 bg-white/10 rounded-full text-zinc-300">
                       {tab.badge}
                     </span>
                   )}
@@ -91,7 +93,7 @@ export function RawPayloadViewer({
           <button
             onClick={handleCopy}
             disabled={!content}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs bg-[#1f2329] hover:bg-[#282d35] text-zinc-200 rounded border border-[#30353f] transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-white/[0.06] hover:bg-white/[0.1] text-zinc-200 rounded-full border border-white/10 transition-all disabled:opacity-40"
             title="Copy Raw Content"
           >
             {copied ? (
@@ -110,7 +112,7 @@ export function RawPayloadViewer({
           {/* Collapse Toggle */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-[#1f2329] rounded transition-all"
+            className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08] rounded-full transition-all"
             title={isCollapsed ? "Expand Inspector" : "Collapse Inspector"}
           >
             {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -121,8 +123,8 @@ export function RawPayloadViewer({
       {/* Content Area */}
       {!isCollapsed && (
         <div className="relative">
-          <pre className="p-4 text-xs font-mono text-zinc-300 overflow-x-auto max-h-[480px] overflow-y-auto whitespace-pre leading-relaxed bg-[#0a0c0e]">
-            <code>{content || "// No payload available"}</code>
+          <pre className="p-5 text-xs font-mono text-zinc-300 overflow-x-auto max-h-[500px] overflow-y-auto whitespace-pre leading-relaxed bg-[#05070c]">
+            <code>{content || "// No payload received yet"}</code>
           </pre>
         </div>
       )}

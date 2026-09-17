@@ -32,5 +32,6 @@ export interface GmailQueryResult {
   configured?: boolean;
   rawHeaders?: string;
   error?: string;
+  message?: string;
   latencyMs?: number;
 }

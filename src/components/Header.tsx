@@ -1,173 +1,138 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Terminal, Newspaper, Radio, Activity, Cpu, Globe } from "lucide-react";
+import {
+  Sparkles,
+  ArrowUpRight,
+  Menu,
+  X,
+  Cpu,
+  Radio,
+  Globe,
+  Activity,
+  Terminal,
+  Layers,
+} from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
-  const [currentDate, setCurrentDate] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const d = new Date();
-    const formatted = d.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    setCurrentDate(formatted);
-  }, []);
+  const navLinks = [
+    { name: "Overview", href: "/" },
+    { name: "arXiv Wire", href: "/dashboard?tab=arxiv" },
+    { name: "Reddit Watcher", href: "/dashboard?tab=reddit" },
+    { name: "Substack", href: "/dashboard?tab=substack" },
+    { name: "LLM Studio", href: "/dashboard?tab=llm" },
+  ];
 
   return (
-    <header className="border-b border-[#262a30] bg-[#0c0d0e]">
-      {/* Top micro-bar: Edition, date, and ticker */}
-      <div className="border-b border-[#1c1f24] px-4 py-1.5 text-[11px] font-mono text-zinc-400 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-4">
-          <span className="text-zinc-500 font-semibold uppercase tracking-wider">
-            VOL. LXXIV NO. 24,112
-          </span>
-          <span className="hidden sm:inline text-zinc-600">•</span>
-          <span className="text-zinc-400">{currentDate || "Automated Morning Edition"}</span>
-          <span className="hidden sm:inline text-zinc-600">•</span>
-          <span className="hidden md:inline text-emerald-400/90 font-medium">
-            ZERO-AUTH REDDIT & RAW API STREAMING ACTIVE
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-zinc-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold">
-              Live Feed
-            </span>
-          </div>
-          <span className="text-zinc-600">|</span>
-          <Link
-            href="/dashboard"
-            className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors flex items-center gap-1"
-          >
-            <Terminal className="w-3 h-3" />
-            <span>Launch Terminal</span>
+    <header className="sticky top-0 z-50 w-full pt-4 px-4 pb-2">
+      <div className="max-w-6xl mx-auto">
+        {/* Floating Glassmorphic Pill Navbar (Reference Image 2 Style) */}
+        <div className="glass-nav rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between">
+          {/* Brand Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-400 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold tracking-tight text-white group-hover:text-indigo-200 transition-colors">
+                Daily Bugle
+              </span>
+              <span className="text-[9px] font-mono tracking-widest text-indigo-400/80 -mt-1 hidden sm:block">
+                AI INTELLIGENCE
+              </span>
+            </div>
           </Link>
-        </div>
-      </div>
 
-      {/* Main Newspaper Masthead */}
-      <div className="px-4 py-6 sm:py-8 max-w-7xl mx-auto text-center relative">
-        {/* Left ear */}
-        <div className="hidden lg:block absolute left-4 top-1/2 -translate-y-1/2 text-left max-w-[200px] border-r border-[#22262d] pr-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-bold mb-0.5">
-            WEATHER REPORT
-          </div>
-          <div className="text-xs text-zinc-300 font-serif leading-tight">
-            Clear inference clouds with a 99.8% chance of token rain.
-          </div>
-        </div>
+          {/* Center Navigation Links (Desktop) */}
+          <nav className="hidden md:flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-full px-3 py-1">
+            {navLinks.map((link) => {
+              const isActive =
+                link.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith("/dashboard") &&
+                    typeof window !== "undefined" &&
+                    window.location.search.includes(link.href.split("?")[1] || "");
 
-        {/* Right ear */}
-        <div className="hidden lg:block absolute right-4 top-1/2 -translate-y-1/2 text-right max-w-[200px] border-l border-[#22262d] pl-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-bold mb-0.5">
-            MARKET TICKER
-          </div>
-          <div className="text-xs text-zinc-300 font-mono leading-tight">
-            OPEN-WEIGHTS <span className="text-emerald-400">▲ +14.2%</span><br />
-            COMPUTE INDEX <span className="text-amber-400">▲ 240k H100</span>
-          </div>
-        </div>
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isActive
+                      ? "text-white bg-white/10 shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05]"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Center Title */}
-        <Link href="/" className="inline-block group">
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-serif font-black tracking-tight text-zinc-100 group-hover:text-red-500 transition-colors uppercase">
-            The Daily Bugle
-          </h1>
-        </Link>
-        <p className="text-xs sm:text-sm font-serif italic text-zinc-400 tracking-wide mt-1">
-          &ldquo;All The AI Intelligence & Raw Research Payloads Fit to Compute&rdquo;
-        </p>
-
-        {/* Triple decorative line rule */}
-        <div className="mt-4 pt-2 border-t-2 border-b border-[#2c313a] flex items-center justify-between text-[11px] font-mono uppercase tracking-widest text-zinc-400 px-2">
-          <span>Global Dispatches</span>
-          <span className="hidden sm:inline">Uncensored Raw XML & JSON Logs</span>
-          <span>Zero-Sanitization Mode</span>
-        </div>
-      </div>
-
-      {/* Navigation bar */}
-      <nav className="border-t border-[#1e2229] bg-[#090a0b] px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto no-scrollbar">
-          <div className="flex items-center space-x-1 py-1 text-xs font-mono uppercase tracking-wider">
-            <Link
-              href="/"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded transition-all whitespace-nowrap ${
-                pathname === "/"
-                  ? "bg-red-950/40 text-red-400 font-semibold border-b-2 border-red-600"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d]"
-              }`}
-            >
-              <Newspaper className="w-3.5 h-3.5" />
-              <span>Front Page</span>
-            </Link>
+          {/* Right Action & Live Status */}
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="hidden lg:inline text-[11px]">Live Streams</span>
+            </div>
 
             <Link
               href="/dashboard"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded transition-all whitespace-nowrap ${
-                pathname === "/dashboard"
-                  ? "bg-red-950/40 text-red-400 font-semibold border-b-2 border-red-600"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d]"
-              }`}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-100 transition-all shadow-md shadow-white/10 hover:shadow-white/20 group"
             >
-              <Terminal className="w-3.5 h-3.5" />
               <span>Command Center</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=arxiv"
-              className="flex items-center gap-1 px-3 py-2 text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d] rounded transition-all whitespace-nowrap"
-            >
-              <Cpu className="w-3.5 h-3.5 text-blue-400" />
-              <span>arXiv Terminal</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=reddit"
-              className="flex items-center gap-1 px-3 py-2 text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d] rounded transition-all whitespace-nowrap"
-            >
-              <Radio className="w-3.5 h-3.5 text-orange-400" />
-              <span>Reddit Watcher</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=substack"
-              className="flex items-center gap-1 px-3 py-2 text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d] rounded transition-all whitespace-nowrap"
-            >
-              <Globe className="w-3.5 h-3.5 text-amber-400" />
-              <span>Substack Tracker</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=llm"
-              className="flex items-center gap-1 px-3 py-2 text-zinc-400 hover:text-zinc-100 hover:bg-[#15181d] rounded transition-all whitespace-nowrap"
-            >
-              <Activity className="w-3.5 h-3.5 text-purple-400" />
-              <span>OpenRouter Studio</span>
+              <div className="w-4 h-4 rounded-full bg-zinc-900 text-white flex items-center justify-center group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+                <ArrowUpRight className="w-2.5 h-2.5" />
+              </div>
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-3 text-xs font-mono text-zinc-500">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Node.js v26
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-              Next.js 16 App Router
-            </span>
-          </div>
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-1.5 text-zinc-400 hover:text-white rounded-full bg-white/5 border border-white/10"
+            aria-label="Toggle Navigation"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
-      </nav>
+
+        {/* Mobile Dropdown Panel */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-2 glass-panel rounded-2xl p-4 border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex flex-col gap-1.5">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  {link.name}
+                </Link>
+              ))}
+              <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Streams Active</span>
+                </div>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-zinc-950"
+                >
+                  Launch App
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
