@@ -6,7 +6,6 @@ import { Header } from "@/components/Header";
 import {
   ArrowRight,
   ArrowUpRight,
-  Clock,
   CheckCircle2,
   Sliders,
   ShieldCheck,
@@ -17,15 +16,6 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-  // Doomscroll Reclaimer Calculator State
-  const [scrollHours, setScrollHours] = useState<number>(2.0);
-
-  // Calculate annual metrics
-  const yearlyHoursLost = Math.round(scrollHours * 365);
-  const yearlyDaysLost = (yearlyHoursLost / 24).toFixed(1);
-  const bugleReadHours = Math.round((5 / 60) * 365); // 5 mins/day
-  const hoursReclaimed = Math.max(0, yearlyHoursLost - bugleReadHours);
-
   // Selected Beat for Interactive Edition Preview
   const [selectedBeat, setSelectedBeat] = useState<{
     id: string;
@@ -130,66 +120,6 @@ export default function LandingPage() {
             <Sliders className="w-4 h-4 text-[var(--accent-terracotta)]" />
             <span>Open Signal Lab</span>
           </Link>
-        </div>
-
-        {/* Interactive "Doomscroll Reclaimer" Calculator Widget */}
-        <div className="mt-16 w-full max-w-xl glass-editorial-card rounded-3xl p-6 sm:p-8 border shadow-2xl text-left">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[var(--accent-terracotta)]" />
-              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-100">
-                Doomscroll Reclaimer Calculator
-              </span>
-            </div>
-            <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-[var(--accent-terracotta)]/15 text-[var(--accent-terracotta)]">
-              {scrollHours} hrs / day
-            </span>
-          </div>
-
-          {/* Interactive Range Slider */}
-          <div className="my-4">
-            <input
-              type="range"
-              min="0.5"
-              max="4.0"
-              step="0.5"
-              value={scrollHours}
-              onChange={(e) => setScrollHours(parseFloat(e.target.value))}
-              className="w-full h-2 bg-black/10 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-[var(--accent-terracotta)]"
-            />
-            <div className="flex justify-between text-[10px] font-mono text-[#5b5a57] dark:text-[#8a8f98] mt-1.5">
-              <span>30m light browse</span>
-              <span>2h average feed</span>
-              <span>4h deep doomscroll</span>
-            </div>
-          </div>
-
-          {/* Impact Comparison Grid */}
-          <div className="grid grid-cols-2 gap-3 mt-6 pt-5 border-t border-black/[0.06] dark:border-white/[0.06]">
-            <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04]">
-              <span className="text-[11px] font-mono text-[#5b5a57] dark:text-[#8a8f98] block">
-                Yearly Time Lost to Feeds
-              </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-white mt-1 block">
-                {yearlyHoursLost} hrs
-              </span>
-              <span className="text-[10px] text-rose-600 dark:text-rose-400 font-medium">
-                ≈ {yearlyDaysLost} days of your year
-              </span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-[var(--accent-terracotta)]/10 border border-[var(--accent-terracotta)]/20">
-              <span className="text-[11px] font-mono text-[var(--accent-terracotta)] font-semibold block">
-                Time Reclaimed With Bugle
-              </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-[var(--accent-terracotta)] mt-1 block">
-                +{hoursReclaimed} hrs
-              </span>
-              <span className="text-[10px] text-[var(--accent-terracotta)] font-medium">
-                In a 5-min finite daily paper
-              </span>
-            </div>
-          </div>
         </div>
       </section>
 
