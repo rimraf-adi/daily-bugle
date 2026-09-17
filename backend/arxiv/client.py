@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 
 import requests
 
+from .categories import normalize_arxiv_query
 from .models import CATEGORY_MAP, ArxivPaper, NewsletterDigest, PaperLinks
 
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
@@ -38,6 +39,7 @@ class ArxivClient:
         :param sort_by: "relevance", "lastUpdatedDate", or "submittedDate".
         :param sort_order: "ascending" or "descending".
         """
+        query = normalize_arxiv_query(query)
         params = {
             "search_query": query,
             "start": start,

@@ -18,6 +18,7 @@ from arxiv import (
     get_category_name,
     search_categories,
     get_categories_by_subject,
+    normalize_arxiv_query,
 )
 from llm_router import LLMRouter, ChatResponse
 from gmail import GmailClient, SubstackEmail
@@ -96,8 +97,9 @@ def render_dashboard() -> None:
             with st.spinner("Fetching raw Atom feed from arXiv API..."):
                 t0 = time.time()
                 client = ArxivClient(timeout=20)
+                normalized_query = normalize_arxiv_query(search_query)
                 params = {
-                    "search_query": search_query,
+                    "search_query": normalized_query,
                     "start": 0,
                     "max_results": max_results,
                     "sortBy": sort_by,
@@ -115,7 +117,7 @@ def render_dashboard() -> None:
                         "raw_xml": raw_xml_text,
                         "url": resp.url,
                         "latency": latency,
-                        "query": search_query,
+                        "query": normalized_query,
                     }
                 except Exception as e:
                     st.error(f"arXiv API request failed: {e}")

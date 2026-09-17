@@ -11,6 +11,7 @@ from .categories import (
     get_categories_by_subject,
     get_category_name,
     list_subjects,
+    normalize_arxiv_query,
     search_categories,
 )
 from .client import (
@@ -36,7 +37,9 @@ __all__ = [
     "search_categories",
     "get_categories_by_subject",
     "list_subjects",
+    "normalize_arxiv_query",
     "fetch_newsletter_digest",
     "fetch_recent_papers",
     "search_papers",
 ]
+

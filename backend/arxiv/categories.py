@@ -12,11 +12,12 @@ Contains all 8 main disciplines, groups, and ~175 subcategories supported by arX
 - Economics (econ.*)
 """
 
+import re
 from typing import Dict, List, Optional
 
 SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
     "Physics - Astrophysics": {
-        "astro-ph": "Astrophysics (General)",
+        "astro-ph.*": "All Astrophysics (General)",
         "astro-ph.GA": "Astrophysics of Galaxies",
         "astro-ph.CO": "Cosmology and Nongalactic Astrophysics",
         "astro-ph.EP": "Earth and Planetary Astrophysics",
@@ -25,7 +26,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "astro-ph.SR": "Solar and Stellar Astrophysics",
     },
     "Physics - Condensed Matter": {
-        "cond-mat": "Condensed Matter (General)",
+        "cond-mat.*": "All Condensed Matter (General)",
         "cond-mat.dis-nn": "Disordered Systems and Neural Networks",
         "cond-mat.mtrl-sci": "Materials Science",
         "cond-mat.mes-hall": "Mesoscale and Nanoscale Physics",
@@ -49,7 +50,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "math-ph": "Mathematical Physics",
     },
     "Physics - Nonlinear Sciences": {
-        "nlin": "Nonlinear Sciences (General)",
+        "nlin.*": "All Nonlinear Sciences (General)",
         "nlin.AO": "Adaptation and Self-Organizing Systems",
         "nlin.CG": "Cellular Automata and Lattice Gases",
         "nlin.CD": "Chaotic Dynamics",
@@ -61,7 +62,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "nucl-th": "Nuclear Theory",
     },
     "Physics - General & Applied": {
-        "physics": "Physics (General)",
+        "physics.*": "All Physics (General)",
         "physics.acc-ph": "Accelerator Physics",
         "physics.app-ph": "Applied Physics",
         "physics.ao-ph": "Atmospheric and Oceanic Physics",
@@ -89,7 +90,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "quant-ph": "Quantum Physics",
     },
     "Mathematics": {
-        "math": "Mathematics (General)",
+        "math.*": "All Mathematics (General)",
         "math.AG": "Algebraic Geometry",
         "math.AT": "Algebraic Topology",
         "math.AP": "Analysis of PDEs",
@@ -124,7 +125,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "math.SG": "Symplectic Geometry",
     },
     "Computer Science": {
-        "cs": "Computer Science (General)",
+        "cs.*": "All Computer Science (General)",
         "cs.AI": "Artificial Intelligence",
         "cs.CL": "Computation and Language (NLP)",
         "cs.CC": "Computational Complexity",
@@ -167,7 +168,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "cs.SY": "Systems and Control (CS)",
     },
     "Quantitative Biology": {
-        "q-bio": "Quantitative Biology (General)",
+        "q-bio.*": "All Quantitative Biology (General)",
         "q-bio.BM": "Biomolecules",
         "q-bio.CB": "Cell Behavior",
         "q-bio.GN": "Genomics",
@@ -180,7 +181,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "q-bio.TO": "Tissues and Organs",
     },
     "Quantitative Finance": {
-        "q-fin": "Quantitative Finance (General)",
+        "q-fin.*": "All Quantitative Finance (General)",
         "q-fin.CP": "Computational Finance",
         "q-fin.EC": "Economics (Finance)",
         "q-fin.GN": "General Finance",
@@ -192,7 +193,7 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "q-fin.TR": "Trading and Market Microstructure",
     },
     "Statistics": {
-        "stat": "Statistics (General)",
+        "stat.*": "All Statistics (General)",
         "stat.AP": "Applications",
         "stat.CO": "Computation",
         "stat.ML": "Machine Learning (Statistics)",
@@ -201,14 +202,14 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
         "stat.TH": "Statistics Theory",
     },
     "Electrical Engineering and Systems Science": {
-        "eess": "Electrical Engineering and Systems Science (General)",
+        "eess.*": "All Electrical Engineering and Systems Science (General)",
         "eess.AS": "Audio and Speech Processing",
         "eess.IV": "Image and Video Processing",
         "eess.SP": "Signal Processing",
         "eess.SY": "Systems and Control (EESS)",
     },
     "Economics": {
-        "econ": "Economics (General)",
+        "econ.*": "All Economics (General)",
         "econ.EM": "Econometrics",
         "econ.GN": "General Economics",
         "econ.TH": "Theoretical Economics",
@@ -219,6 +220,21 @@ SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
 CATEGORY_MAP: Dict[str, str] = {}
 for _group_name, _cats in SUBJECT_TAXONOMY.items():
     CATEGORY_MAP.update(_cats)
+
+# Bare archive aliases (e.g. 'stat' -> 'Statistics')
+CATEGORY_MAP.update({
+    "astro-ph": "Astrophysics",
+    "cond-mat": "Condensed Matter",
+    "nlin": "Nonlinear Sciences",
+    "physics": "Physics",
+    "math": "Mathematics",
+    "cs": "Computer Science",
+    "q-bio": "Quantitative Biology",
+    "q-fin": "Quantitative Finance",
+    "stat": "Statistics",
+    "eess": "Electrical Engineering and Systems Science",
+    "econ": "Economics",
+})
 
 
 def get_category_name(category_code: str) -> str:
@@ -266,3 +282,18 @@ def get_categories_by_subject(subject_prefix: str) -> Dict[str, str]:
 def list_subjects() -> List[str]:
     """Return all high-level subject groups in the taxonomy."""
     return list(SUBJECT_TAXONOMY.keys())
+
+
+def normalize_arxiv_query(query: str) -> str:
+    """
+    Normalize bare top-level disciplines (e.g. 'cat:cs' or 'cat:stat') to
+    wildcard matches ('cat:cs.*' or 'cat:stat.*') because arXiv's API
+    rejects bare archive queries and requires subcategories or wildcard.
+    """
+    bare_disciplines = [
+        "cs", "stat", "math", "econ", "q-bio", "q-fin", "eess",
+        "physics", "nlin", "astro-ph", "cond-mat"
+    ]
+    for disc in bare_disciplines:
+        query = re.sub(rf"\bcat:{re.escape(disc)}(?![\.\*])\b", f"cat:{disc}.*", query)
+    return query
