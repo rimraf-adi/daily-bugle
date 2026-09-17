@@ -240,7 +240,7 @@ function DashboardContent() {
       const resp = await fetch(`/api/gmail?${params.toString()}`);
       const data: GmailQueryResult = await resp.json();
       if (!resp.ok) {
-        throw new Error(data.message || `HTTP ${resp.status}`);
+        throw new Error(data.message || data.error || `HTTP ${resp.status}`);
       }
       setGmailResult(data);
     } catch (err) {
@@ -334,7 +334,7 @@ function DashboardContent() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#06080e] text-[#f1f5f9] selection:bg-indigo-500/30 selection:text-indigo-200 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-main)] selection:bg-indigo-500/30 selection:text-indigo-600 dark:selection:text-indigo-200 relative overflow-hidden transition-colors duration-200">
       {/* Ambient Aurora Top Glow */}
       <div className="absolute top-0 left-0 right-0 h-[450px] aurora-hero pointer-events-none -z-10" />
       <div className="absolute top-36 left-1/2 -translate-x-1/2 w-[700px] h-[350px] aurora-glow-center pointer-events-none -z-10 blur-3xl opacity-50" />
@@ -344,22 +344,24 @@ function DashboardContent() {
 
       {/* Command Center Modern Pill Tab Bar */}
       <div className="pt-4 px-4 pb-2 max-w-6xl mx-auto w-full">
-        <div className="glass-nav rounded-2xl p-2 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
+        <div className="glass-nav rounded-2xl p-2 flex flex-wrap items-center justify-between gap-3 shadow-lg dark:shadow-2xl">
           {/* Module Pill Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               onClick={() => setActiveTab("arxiv")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "arxiv"
-                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Cpu className="w-4 h-4 text-blue-400" />
+              <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>arXiv Wire</span>
               {arxivResult && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                  activeTab === "arxiv" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-blue-500/20 text-blue-300"
+                  activeTab === "arxiv"
+                    ? "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-950 font-bold"
+                    : "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
                 }`}>
                   {arxivResult.papers.length}
                 </span>
@@ -370,15 +372,17 @@ function DashboardContent() {
               onClick={() => setActiveTab("reddit")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "reddit"
-                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Radio className="w-4 h-4 text-orange-400" />
+              <Radio className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               <span>Reddit Watcher</span>
               {redditResult && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                  activeTab === "reddit" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-orange-500/20 text-orange-300"
+                  activeTab === "reddit"
+                    ? "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-950 font-bold"
+                    : "bg-orange-500/10 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300"
                 }`}>
                   {redditResult.posts.length}
                 </span>
@@ -389,15 +393,17 @@ function DashboardContent() {
               onClick={() => setActiveTab("substack")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "substack"
-                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Globe className="w-4 h-4 text-amber-400" />
+              <Globe className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <span>Substack Radar</span>
               {gmailResult && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                  activeTab === "substack" ? "bg-zinc-200 text-zinc-950 font-bold" : "bg-amber-500/20 text-amber-300"
+                  activeTab === "substack"
+                    ? "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-950 font-bold"
+                    : "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
                 }`}>
                   {gmailResult.emails.length}
                 </span>
@@ -408,11 +414,11 @@ function DashboardContent() {
               onClick={() => setActiveTab("llm")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "llm"
-                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Activity className="w-4 h-4 text-purple-400" />
+              <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span>OpenRouter Studio</span>
             </button>
 
@@ -423,11 +429,11 @@ function DashboardContent() {
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "snapshot"
-                  ? "bg-white text-zinc-950 font-semibold shadow-lg shadow-white/10"
-                  : "text-zinc-400 hover:text-white hover:bg-white/[0.06]"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Layers className="w-4 h-4 text-indigo-400" />
+              <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Multi-Source Snapshot</span>
             </button>
           </div>
@@ -442,10 +448,10 @@ function DashboardContent() {
               else fetchSnapshot();
             }}
             disabled={arxivLoading || redditLoading || gmailLoading || llmLoading || snapshotLoading}
-            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 border border-white/10 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 dark:text-zinc-200 border border-black/10 dark:border-white/10 transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${
-              arxivLoading || redditLoading || gmailLoading || llmLoading || snapshotLoading ? "animate-spin text-indigo-400" : "text-zinc-400"
+              arxivLoading || redditLoading || gmailLoading || llmLoading || snapshotLoading ? "animate-spin text-indigo-600 dark:text-indigo-400" : "text-zinc-500 dark:text-zinc-400"
             }`} />
             <span>Refresh Feed</span>
           </button>
@@ -461,23 +467,23 @@ function DashboardContent() {
           <div className="space-y-6">
             {/* Query Controls Card */}
             <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                     <Cpu className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-tight">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                       arXiv Research Wire
                     </h3>
-                    <p className="text-xs text-zinc-400 font-mono">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                       Query 166 scientific taxonomy disciplines via Atom XML
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 font-medium">
                     export.arxiv.org/api/query
                   </span>
                 </div>
@@ -486,8 +492,8 @@ function DashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Discipline / Subject selector */}
                 <div className="md:col-span-4 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 flex items-center gap-1.5 uppercase tracking-wider">
-                    <Filter className="w-3.5 h-3.5 text-blue-400" />
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+                    <Filter className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     <span>Discipline / Subject</span>
                   </label>
                   <select
@@ -498,10 +504,10 @@ function DashboardContent() {
                       const catKeys = Object.keys(getCategoriesBySubject(newSub));
                       if (catKeys.length > 0) setSelectedCategory(catKeys[0]);
                     }}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                   >
                     {subjects.map((sub) => (
-                      <option key={sub} value={sub} className="bg-[#0b0e17] text-zinc-200">
+                      <option key={sub} value={sub} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">
                         {sub} ({Object.keys(getCategoriesBySubject(sub)).length})
                       </option>
                     ))}
@@ -510,16 +516,16 @@ function DashboardContent() {
 
                 {/* Specific Category selector */}
                 <div className="md:col-span-5 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">
                     Subcategory Code & Name
                   </label>
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 truncate"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 truncate"
                   >
                     {Object.entries(getCategoriesBySubject(selectedSubject)).map(([cat, name]) => (
-                      <option key={cat} value={cat} className="bg-[#0b0e17] text-zinc-200">
+                      <option key={cat} value={cat} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">
                         [{cat}] {name}
                       </option>
                     ))}
@@ -528,23 +534,23 @@ function DashboardContent() {
 
                 {/* Max Results */}
                 <div className="md:col-span-3 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Limit</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Limit</label>
                   <select
                     value={arxivLimit}
                     onChange={(e) => setArxivLimit(Number(e.target.value))}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                   >
-                    <option value={5} className="bg-[#0b0e17]">5 Papers</option>
-                    <option value={10} className="bg-[#0b0e17]">10 Papers</option>
-                    <option value={20} className="bg-[#0b0e17]">20 Papers</option>
-                    <option value={35} className="bg-[#0b0e17]">35 Papers</option>
+                    <option value={5} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">5 Papers</option>
+                    <option value={10} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">10 Papers</option>
+                    <option value={20} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">20 Papers</option>
+                    <option value={35} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">35 Papers</option>
                   </select>
                 </div>
 
                 {/* Custom Search Query override */}
                 <div className="md:col-span-8 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
-                    Custom Query (Optional - overrides category dropdown)
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">
+                    Custom Query (Optional)
                   </label>
                   <div className="relative">
                     <input
@@ -552,24 +558,24 @@ function DashboardContent() {
                       placeholder="e.g. cat:cs.AI AND ti:reasoning OR quantum"
                       value={customArxivQuery}
                       onChange={(e) => setCustomArxivQuery(e.target.value)}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 placeholder:text-zinc-600"
+                      className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                     />
-                    <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
                   </div>
                 </div>
 
                 {/* Sort By & Button */}
                 <div className="md:col-span-4 flex items-end gap-3">
                   <div className="flex-1 space-y-2">
-                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Sort By</label>
+                    <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Sort By</label>
                     <select
                       value={arxivSortBy}
                       onChange={(e) => setArxivSortBy(e.target.value as any)}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                      className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                     >
-                      <option value="submittedDate" className="bg-[#0b0e17]">Submitted Date</option>
-                      <option value="lastUpdatedDate" className="bg-[#0b0e17]">Last Updated</option>
-                      <option value="relevance" className="bg-[#0b0e17]">Relevance</option>
+                      <option value="submittedDate" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Submitted Date</option>
+                      <option value="lastUpdatedDate" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Last Updated</option>
+                      <option value="relevance" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Relevance</option>
                     </select>
                   </div>
                   <button
@@ -586,8 +592,8 @@ function DashboardContent() {
 
             {/* Error banner */}
             {arxivError && (
-              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 dark:text-red-400" />
                 <span>{arxivError}</span>
               </div>
             )}
@@ -595,11 +601,11 @@ function DashboardContent() {
             {/* Papers List */}
             {arxivResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 px-2">
                   <span>
-                    Query executed: <code className="text-blue-300">{arxivResult.query}</code>
+                    Query executed: <code className="text-blue-700 dark:text-blue-300 font-bold">{arxivResult.query}</code>
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                  <span className="px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10">
                     {arxivResult.papers.length} Papers Retrieved
                   </span>
                 </div>
@@ -608,47 +614,47 @@ function DashboardContent() {
                   {arxivResult.papers.map((paper) => (
                     <article
                       key={paper.arxivId}
-                      className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
+                      className="glass-card rounded-2xl p-6 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all space-y-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 font-medium">
                             {paper.primaryCategory} • {paper.primaryCategoryName}
                           </span>
-                          <span className="text-xs font-mono text-zinc-400">
+                          <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
                             ID: {paper.arxivId}
                           </span>
                         </div>
                         {paper.published && (
-                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
-                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                             <span>{new Date(paper.published).toLocaleDateString()}</span>
                           </div>
                         )}
                       </div>
 
-                      <h4 className="text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-blue-300 transition-colors cursor-pointer">
+                      <h4 className="text-lg font-sans font-semibold text-zinc-900 dark:text-white tracking-tight leading-snug hover:text-blue-600 dark:hover:text-blue-300 transition-colors cursor-pointer">
                         {paper.title}
                       </h4>
 
-                      <p className="text-xs font-mono text-zinc-400">
+                      <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
                         Authors:{" "}
-                        <span className="text-zinc-200">
+                        <span className="text-zinc-900 dark:text-zinc-200">
                           {paper.authors.slice(0, 5).join(", ")}
                           {paper.authors.length > 5 && ` (+${paper.authors.length - 5} more)`}
                         </span>
                       </p>
 
-                      <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
+                      <div className="text-xs font-sans text-zinc-700 dark:text-zinc-300/90 leading-relaxed bg-slate-100/70 dark:bg-black/30 p-4 rounded-xl border border-black/[0.05] dark:border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
                         {paper.abstract}
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06]">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-black/[0.06] dark:border-white/[0.06]">
                         <div className="flex flex-wrap gap-1.5">
                           {paper.categories.slice(0, 4).map((c) => (
                             <span
                               key={c}
-                              className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white/[0.05] text-zinc-400 border border-white/[0.08]"
+                              className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-black/[0.04] dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400 border border-black/[0.06] dark:border-white/[0.08]"
                             >
                               {c}
                             </span>
@@ -660,7 +666,7 @@ function DashboardContent() {
                             href={paper.links.abstract}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white transition-all flex items-center gap-1 border border-white/10"
+                            className="px-3 py-1.5 rounded-full bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all flex items-center gap-1 border border-black/10 dark:border-white/10"
                           >
                             <span>Abstract</span>
                             <ExternalLink className="w-3 h-3" />
@@ -669,7 +675,7 @@ function DashboardContent() {
                             href={paper.links.pdf}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 transition-all flex items-center gap-1 font-semibold"
+                            className="px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 transition-all flex items-center gap-1 font-semibold"
                           >
                             <span>PDF</span>
                             <ExternalLink className="w-3 h-3" />
@@ -678,7 +684,7 @@ function DashboardContent() {
                             href={paper.links.html}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 font-semibold"
+                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1 font-semibold"
                           >
                             <span>HTML View</span>
                             <ExternalLink className="w-3 h-3" />
@@ -721,23 +727,23 @@ function DashboardContent() {
           <div className="space-y-6">
             {/* Reddit Controls Card */}
             <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 flex items-center justify-center">
                     <Radio className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-tight">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                       Reddit Community Watcher
                     </h3>
-                    <p className="text-xs text-zinc-400 font-mono">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                       Zero-Auth Public RSS stream with dual-tier disk caching
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-medium">
                     Throttle: 2.5s • Cache: 60s
                   </span>
                 </div>
@@ -745,7 +751,7 @@ function DashboardContent() {
 
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono text-zinc-400 mr-1 uppercase tracking-wider">Curated:</span>
+                <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mr-1 uppercase tracking-wider font-medium">Curated:</span>
                 {curatedSubreddits.map((sub) => (
                   <button
                     key={sub}
@@ -755,8 +761,8 @@ function DashboardContent() {
                     }}
                     className={`px-3 py-1 rounded-full text-xs font-mono transition-all ${
                       subredditInput.toLowerCase() === sub.toLowerCase()
-                        ? "bg-orange-500/20 border border-orange-500/40 text-orange-200 font-bold shadow-md shadow-orange-500/10"
-                        : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08]"
+                        ? "bg-orange-500/20 border border-orange-500/40 text-orange-800 dark:text-orange-200 font-bold shadow-sm"
+                        : "bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
                     }`}
                   >
                     r/{sub}
@@ -767,59 +773,59 @@ function DashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Subreddit Input */}
                 <div className="md:col-span-5 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Target Subreddit</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Target Subreddit</label>
                   <input
                     type="text"
                     value={subredditInput}
                     onChange={(e) => setSubredditInput(e.target.value)}
                     placeholder="e.g. LocalLLaMA or MachineLearning"
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                   />
                 </div>
 
                 {/* Listing */}
                 <div className="md:col-span-3 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Feed Listing</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Feed Listing</label>
                   <select
                     value={redditListing}
                     onChange={(e) => setRedditListing(e.target.value as any)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                   >
-                    <option value="hot" className="bg-[#0b0e17]">Hot (Trending)</option>
-                    <option value="new" className="bg-[#0b0e17]">New (Chronological)</option>
-                    <option value="top" className="bg-[#0b0e17]">Top (Highest Voted)</option>
-                    <option value="rising" className="bg-[#0b0e17]">Rising (Gaining)</option>
+                    <option value="hot" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Hot (Trending)</option>
+                    <option value="new" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">New (Chronological)</option>
+                    <option value="top" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Top (Highest Voted)</option>
+                    <option value="rising" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Rising (Gaining)</option>
                   </select>
                 </div>
 
                 {/* Time filter (if top) or Limit */}
                 {redditListing === "top" ? (
                   <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Time Window</label>
+                    <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Time Window</label>
                     <select
                       value={redditTimeFilter}
                       onChange={(e) => setRedditTimeFilter(e.target.value)}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                      className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                     >
-                      <option value="day" className="bg-[#0b0e17]">Past 24 Hours</option>
-                      <option value="week" className="bg-[#0b0e17]">Past Week</option>
-                      <option value="month" className="bg-[#0b0e17]">Past Month</option>
-                      <option value="year" className="bg-[#0b0e17]">Past Year</option>
-                      <option value="all" className="bg-[#0b0e17]">All Time</option>
+                      <option value="day" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Past 24 Hours</option>
+                      <option value="week" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Past Week</option>
+                      <option value="month" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Past Month</option>
+                      <option value="year" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">Past Year</option>
+                      <option value="all" className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">All Time</option>
                     </select>
                   </div>
                 ) : (
                   <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Limit</label>
+                    <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Limit</label>
                     <select
                       value={redditLimit}
                       onChange={(e) => setRedditLimit(Number(e.target.value))}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
+                      className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500"
                     >
-                      <option value={5} className="bg-[#0b0e17]">5 Posts</option>
-                      <option value={10} className="bg-[#0b0e17]">10 Posts</option>
-                      <option value={15} className="bg-[#0b0e17]">15 Posts</option>
-                      <option value={25} className="bg-[#0b0e17]">25 Posts</option>
+                      <option value={5} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">5 Posts</option>
+                      <option value={10} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">10 Posts</option>
+                      <option value={15} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">15 Posts</option>
+                      <option value={25} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">25 Posts</option>
                     </select>
                   </div>
                 )}
@@ -840,10 +846,10 @@ function DashboardContent() {
 
             {/* Watchlist Manager Panel */}
             <div className="glass-card rounded-3xl p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
                 <div className="flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-orange-400" />
-                  <h4 className="text-sm font-semibold text-zinc-200">
+                  <Sliders className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-200">
                     Watchlist Manager (Seen-Post Deduplication Active)
                   </h4>
                 </div>
@@ -865,9 +871,9 @@ function DashboardContent() {
                       setRedditLoading(false);
                     }
                   }}
-                  className="px-3.5 py-1.5 bg-white/[0.06] hover:bg-white/[0.12] text-xs font-mono text-zinc-200 rounded-full border border-white/10 transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-xs font-mono text-zinc-700 dark:text-zinc-200 rounded-full border border-black/10 dark:border-white/10 transition-all flex items-center gap-1.5"
                 >
-                  <Eye className="w-3.5 h-3.5 text-orange-400" />
+                  <Eye className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
                   <span>Poll New Unseen</span>
                 </button>
               </div>
@@ -879,14 +885,14 @@ function DashboardContent() {
                   placeholder="Subreddit (e.g. singularity)"
                   value={newSubName}
                   onChange={(e) => setNewSubName(e.target.value)}
-                  className="bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  className="bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <input
                   type="text"
                   placeholder="Category label"
                   value={newSubCategory}
                   onChange={(e) => setNewSubCategory(e.target.value)}
-                  className="bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  className="bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
                 />
                 <button
                   onClick={handleAddSubreddit}
@@ -902,26 +908,26 @@ function DashboardContent() {
                 {watchlist.map((sub) => (
                   <div
                     key={sub.name}
-                    className="p-3.5 rounded-2xl border border-white/[0.06] bg-black/20 flex items-center justify-between text-xs font-mono"
+                    className="p-3.5 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-slate-50/60 dark:bg-black/20 flex items-center justify-between text-xs font-mono"
                   >
                     <div>
-                      <div className="font-bold text-zinc-200">{sub.displayName || `r/${sub.name}`}</div>
-                      <div className="text-[11px] text-zinc-400">{sub.category} • limit: {sub.limit}</div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-200">{sub.displayName || `r/${sub.name}`}</div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{sub.category} • limit: {sub.limit}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleToggleSubreddit(sub.name, sub.enabled)}
                         className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all ${
                           sub.enabled
-                            ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                            : "bg-white/[0.05] text-zinc-400"
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                            : "bg-black/[0.05] dark:bg-white/[0.05] text-zinc-500 dark:text-zinc-400"
                         }`}
                       >
                         {sub.enabled ? "Active" : "Disabled"}
                       </button>
                       <button
                         onClick={() => handleRemoveSubreddit(sub.name)}
-                        className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                        className="p-1 text-zinc-400 hover:text-red-500 transition-colors"
                         title="Remove Subreddit"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -934,8 +940,8 @@ function DashboardContent() {
 
             {/* Error Banner */}
             {redditError && (
-              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 dark:text-red-400" />
                 <span>{redditError}</span>
               </div>
             )}
@@ -943,11 +949,11 @@ function DashboardContent() {
             {/* Posts List */}
             {redditResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 px-2">
                   <span>
-                    Stream: <code className="text-orange-300">{redditResult.subreddit}</code> ({redditResult.listing})
+                    Stream: <code className="text-orange-700 dark:text-orange-300 font-bold">{redditResult.subreddit}</code> ({redditResult.listing})
                   </span>
-                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                  <span className="px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10">
                     {redditResult.posts.length} Posts Extracted
                   </span>
                 </div>
@@ -956,55 +962,55 @@ function DashboardContent() {
                   {redditResult.posts.map((post) => (
                     <article
                       key={post.id}
-                      className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
+                      className="glass-card rounded-2xl p-6 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all space-y-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-orange-500/10 text-orange-300 border border-orange-500/20">
+                          <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/20 font-medium">
                             {post.subreddit}
                           </span>
-                          <span className="text-xs font-mono text-zinc-400">
+                          <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
                             Author: {post.author}
                           </span>
                         </div>
                         {post.publishedAt && (
-                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
-                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                            <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                             <span>{new Date(post.publishedAt).toLocaleString()}</span>
                           </div>
                         )}
                       </div>
 
-                      <h4 className="text-base sm:text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-orange-300 transition-colors cursor-pointer">
+                      <h4 className="text-base sm:text-lg font-sans font-semibold text-zinc-900 dark:text-white tracking-tight leading-snug hover:text-orange-600 dark:hover:text-orange-300 transition-colors cursor-pointer">
                         {post.title}
                       </h4>
 
                       {post.contentText && (
-                        <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
+                        <div className="text-xs font-sans text-zinc-700 dark:text-zinc-300/90 leading-relaxed bg-slate-100/70 dark:bg-black/30 p-4 rounded-xl border border-black/[0.05] dark:border-white/[0.05] line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">
                           {post.contentText}
                         </div>
                       )}
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06] text-xs font-mono">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-black/[0.06] dark:border-white/[0.06] text-xs font-mono">
                         {post.externalUrl && post.externalUrl !== post.permalink ? (
                           <a
                             href={post.externalUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5 font-medium"
                           >
                             <span>Linked Article</span>
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : (
-                          <span className="text-zinc-400">Text Submission</span>
+                          <span className="text-zinc-500 dark:text-zinc-400">Text Submission</span>
                         )}
 
                         <a
                           href={post.permalink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 border border-white/10"
+                          className="px-3 py-1.5 rounded-full bg-black/[0.04] hover:bg-black/[0.08] dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white transition-all flex items-center gap-1.5 border border-black/10 dark:border-white/10"
                         >
                           <span>Reddit Discussion</span>
                           <ExternalLink className="w-3 h-3" />
@@ -1046,23 +1052,23 @@ function DashboardContent() {
           <div className="space-y-6">
             {/* Substack Controls Card */}
             <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                     <Globe className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-tight">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                       Substack Newsletter Radar
                     </h3>
-                    <p className="text-xs text-zinc-400 font-mono">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                       TLS IMAP direct connection with canonical web link extraction
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-medium">
                     Host: imap.gmail.com:993
                   </span>
                 </div>
@@ -1071,38 +1077,38 @@ function DashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Folder input */}
                 <div className="md:col-span-4 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Mailbox Folder</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Mailbox Folder</label>
                   <input
                     type="text"
                     value={gmailFolder}
                     onChange={(e) => setGmailFolder(e.target.value)}
                     placeholder="INBOX"
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
                   />
                 </div>
 
                 {/* Limit */}
                 <div className="md:col-span-3 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Max Issues</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Max Issues</label>
                   <select
                     value={gmailLimit}
                     onChange={(e) => setGmailLimit(Number(e.target.value))}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500"
                   >
-                    <option value={5} className="bg-[#0b0e17]">5 Newsletters</option>
-                    <option value={10} className="bg-[#0b0e17]">10 Newsletters</option>
-                    <option value={20} className="bg-[#0b0e17]">20 Newsletters</option>
+                    <option value={5} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">5 Newsletters</option>
+                    <option value={10} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">10 Newsletters</option>
+                    <option value={20} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">20 Newsletters</option>
                   </select>
                 </div>
 
                 {/* Unread Only Toggle */}
                 <div className="md:col-span-3 flex items-center pt-6">
-                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-mono text-zinc-300">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-mono text-zinc-700 dark:text-zinc-300 font-medium">
                     <input
                       type="checkbox"
                       checked={gmailUnreadOnly}
                       onChange={(e) => setGmailUnreadOnly(e.target.checked)}
-                      className="rounded border-white/20 bg-white/[0.05] text-amber-500 focus:ring-amber-500/20"
+                      className="rounded border-zinc-300 dark:border-white/20 bg-white dark:bg-white/[0.05] text-amber-500 focus:ring-amber-500/20"
                     />
                     <span>Unread (UNSEEN) Only</span>
                   </label>
@@ -1124,20 +1130,20 @@ function DashboardContent() {
 
             {/* Error or Notice Banner */}
             {gmailError && (
-              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 dark:text-red-400" />
                 <span>{gmailError}</span>
               </div>
             )}
 
             {gmailResult && gmailResult.configured === false && (
-              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs font-mono space-y-2">
+              <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs font-mono space-y-2">
                 <div className="font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                   <span>Gmail Credentials Required For Live Fetch</span>
                 </div>
-                <p className="text-zinc-300 leading-relaxed">
-                  Configure <code className="text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">GMAIL_USER</code> and <code className="text-amber-300 bg-black/40 px-1.5 py-0.5 rounded">GMAIL_APP_PASSWORD</code> in <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">.env.local</code> to fetch live Substack newsletters directly from your inbox.
+                <p className="text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                  Configure <code className="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-black/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-none">GMAIL_USER</code> and <code className="text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-black/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-none">GMAIL_APP_PASSWORD</code> in <code className="text-zinc-900 dark:text-white bg-black/5 dark:bg-black/40 px-1.5 py-0.5 rounded">.env.local</code> to fetch live Substack newsletters directly from your inbox.
                 </p>
               </div>
             )}
@@ -1145,15 +1151,15 @@ function DashboardContent() {
             {/* Emails List */}
             {gmailResult && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-2">
-                  <span>Folder: <code className="text-amber-300">{gmailResult.folder}</code></span>
-                  <span className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10">
+                <div className="flex items-center justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 px-2">
+                  <span>Folder: <code className="text-amber-700 dark:text-amber-300 font-bold">{gmailResult.folder}</code></span>
+                  <span className="px-2.5 py-1 rounded-full bg-black/[0.04] dark:bg-white/[0.04] border border-black/10 dark:border-white/10">
                     {gmailResult.emails.length} Issues Retrieved
                   </span>
                 </div>
 
                 {gmailResult.emails.length === 0 ? (
-                  <div className="p-8 rounded-2xl border border-white/[0.08] bg-black/20 text-center text-zinc-400 text-xs font-mono">
+                  <div className="p-8 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-white dark:bg-black/20 text-center text-zinc-500 dark:text-zinc-400 text-xs font-mono">
                     No Substack emails found in this mailbox query. Try selecting all messages or verify Substack subscriptions.
                   </div>
                 ) : (
@@ -1161,35 +1167,35 @@ function DashboardContent() {
                     {gmailResult.emails.map((item) => (
                       <article
                         key={item.id}
-                        className="glass-card rounded-2xl p-6 border border-white/[0.08] hover:border-white/20 transition-all space-y-4"
+                        className="glass-card rounded-2xl p-6 border border-black/[0.06] dark:border-white/[0.08] hover:border-black/20 dark:hover:border-white/20 transition-all space-y-4"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20 font-semibold">
+                            <span className="px-3 py-1 rounded-full text-[11px] font-mono bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-semibold">
                               {item.senderName || item.sender}
                             </span>
-                            <span className="text-xs font-mono text-zinc-400">
+                            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
                               UID: {item.id}
                             </span>
                           </div>
                           {item.date && (
-                            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400">
-                              <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 dark:text-zinc-400">
+                              <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                               <span>{new Date(item.date).toLocaleString()}</span>
                             </div>
                           )}
                         </div>
 
-                        <h4 className="text-lg font-sans font-semibold text-white tracking-tight leading-snug hover:text-amber-300 transition-colors cursor-pointer">
+                        <h4 className="text-lg font-sans font-semibold text-zinc-900 dark:text-white tracking-tight leading-snug hover:text-amber-600 dark:hover:text-amber-300 transition-colors cursor-pointer">
                           {item.subject}
                         </h4>
 
-                        <div className="text-xs font-sans text-zinc-300/90 leading-relaxed bg-black/30 p-4 rounded-xl border border-white/[0.05] line-clamp-4 hover:line-clamp-none transition-all cursor-pointer">
+                        <div className="text-xs font-sans text-zinc-700 dark:text-zinc-300/90 leading-relaxed bg-slate-100/70 dark:bg-black/30 p-4 rounded-xl border border-black/[0.05] dark:border-white/[0.05] line-clamp-4 hover:line-clamp-none transition-all cursor-pointer">
                           {item.bodyText}
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/[0.06] text-xs font-mono">
-                          <div className="text-zinc-400">
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-black/[0.06] dark:border-white/[0.06] text-xs font-mono">
+                          <div className="text-zinc-500 dark:text-zinc-400">
                             {item.links.length} hyperlinks identified
                           </div>
 
@@ -1198,7 +1204,7 @@ function DashboardContent() {
                               href={item.webUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 rounded-full font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                              className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-full font-semibold transition-all flex items-center gap-1.5 shadow-md shadow-amber-600/20"
                             >
                               <span>Read Post on Substack</span>
                               <ExternalLink className="w-3 h-3" />
@@ -1244,23 +1250,23 @@ function DashboardContent() {
           <div className="space-y-6">
             {/* LLM Controls Card */}
             <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                     <Activity className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white tracking-tight">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                       OpenRouter Studio
                     </h3>
-                    <p className="text-xs text-zinc-400 font-mono">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                       Multi-model completions with real-time prompt & completion token counters
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 font-medium">
                     openrouter.ai/api/v1
                   </span>
                 </div>
@@ -1269,14 +1275,14 @@ function DashboardContent() {
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                 {/* Model Selector */}
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Model Selector</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Model Selector</label>
                   <select
                     value={llmModel}
                     onChange={(e) => setLlmModel(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   >
                     {modelOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value} className="bg-[#0b0e17] text-zinc-200">
+                      <option key={opt.value} value={opt.value} className="bg-white text-zinc-900 dark:bg-[#0b0e17] dark:text-zinc-200">
                         {opt.label}
                       </option>
                     ))}
@@ -1285,7 +1291,7 @@ function DashboardContent() {
 
                 {/* Custom Model String */}
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">
                     Custom Model (Optional)
                   </label>
                   <input
@@ -1293,15 +1299,15 @@ function DashboardContent() {
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
                     placeholder="Overrides dropdown if provided"
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 placeholder:text-zinc-600"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                   />
                 </div>
 
                 {/* Temperature & Max Tokens */}
                 <div className="md:col-span-6 space-y-2">
-                  <div className="flex justify-between text-xs font-mono text-zinc-400">
+                  <div className="flex justify-between text-xs font-mono text-zinc-500 dark:text-zinc-400 font-medium">
                     <span>TEMPERATURE</span>
-                    <span className="text-purple-300 font-bold">{llmTemperature}</span>
+                    <span className="text-purple-600 dark:text-purple-300 font-bold">{llmTemperature}</span>
                   </div>
                   <input
                     type="range"
@@ -1310,35 +1316,35 @@ function DashboardContent() {
                     step="0.05"
                     value={llmTemperature}
                     onChange={(e) => setLlmTemperature(parseFloat(e.target.value))}
-                    className="w-full accent-purple-500"
+                    className="w-full accent-purple-600"
                   />
                 </div>
 
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Max Tokens</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Max Tokens</label>
                   <input
                     type="number"
                     value={llmMaxTokens}
                     onChange={(e) => setLlmMaxTokens(Number(e.target.value))}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
                 {/* System Prompt */}
                 <div className="md:col-span-12 space-y-2">
-                  <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">System Instruction</label>
+                  <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">System Instruction</label>
                   <textarea
                     rows={2}
                     value={llmSystemPrompt}
                     onChange={(e) => setLlmSystemPrompt(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
                 {/* User Prompt */}
                 <div className="md:col-span-12 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">Prompt / Digest Input</label>
+                    <label className="text-xs font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Prompt / Digest Input</label>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
@@ -1350,7 +1356,7 @@ function DashboardContent() {
                             setLlmPrompt(`Format an authoritative digest based on these latest arXiv research papers:\n\n${summary}`);
                           }
                         }}
-                        className="text-[11px] font-mono px-3 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 transition-all"
+                        className="text-[11px] font-mono px-3 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/20 transition-all font-medium"
                       >
                         + Insert arXiv Digest Context
                       </button>
@@ -1360,7 +1366,7 @@ function DashboardContent() {
                     rows={4}
                     value={llmPrompt}
                     onChange={(e) => setLlmPrompt(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
+                    className="w-full bg-white dark:bg-white/[0.04] border border-black/10 dark:border-white/10 rounded-xl p-3.5 text-xs font-mono text-zinc-900 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500"
                   />
                 </div>
 
@@ -1380,8 +1386,8 @@ function DashboardContent() {
 
             {/* Error Banner */}
             {llmError && (
-              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 dark:text-red-400" />
                 <span>{llmError}</span>
               </div>
             )}
@@ -1392,21 +1398,21 @@ function DashboardContent() {
                 {/* Token usage badges */}
                 {llmResponse.usage && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
-                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Prompt Tokens</div>
-                      <div className="text-xl font-mono font-bold text-zinc-100 mt-1">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-black/[0.06] dark:border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Prompt Tokens</div>
+                      <div className="text-xl font-mono font-bold text-zinc-900 dark:text-zinc-100 mt-1">
                         {llmResponse.usage.prompt_tokens ?? llmResponse.usage.promptTokens ?? 0}
                       </div>
                     </div>
-                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
-                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Completion Tokens</div>
-                      <div className="text-xl font-mono font-bold text-purple-400 mt-1">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-black/[0.06] dark:border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Completion Tokens</div>
+                      <div className="text-xl font-mono font-bold text-purple-600 dark:text-purple-400 mt-1">
                         {llmResponse.usage.completion_tokens ?? llmResponse.usage.completionTokens ?? 0}
                       </div>
                     </div>
-                    <div className="p-4 rounded-2xl glass-card text-center border border-white/[0.08]">
-                      <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Total Tokens</div>
-                      <div className="text-xl font-mono font-bold text-emerald-400 mt-1">
+                    <div className="p-4 rounded-2xl glass-card text-center border border-black/[0.06] dark:border-white/[0.08]">
+                      <div className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-medium">Total Tokens</div>
+                      <div className="text-xl font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                         {llmResponse.usage.total_tokens ?? llmResponse.usage.totalTokens ?? 0}
                       </div>
                     </div>
@@ -1414,17 +1420,17 @@ function DashboardContent() {
                 )}
 
                 {/* Content Box */}
-                <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 border border-white/[0.08]">
-                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 text-xs font-mono text-zinc-400">
+                <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 border border-black/[0.06] dark:border-white/[0.08]">
+                  <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3 text-xs font-mono text-zinc-500 dark:text-zinc-400">
                     <span className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      Model: <code className="text-purple-300 font-bold">{llmResponse.model}</code>
+                      <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      Model: <code className="text-purple-700 dark:text-purple-300 font-bold">{llmResponse.model}</code>
                     </span>
                     {llmResponse.finishReason && (
-                      <span className="text-zinc-400">Finish: {llmResponse.finishReason}</span>
+                      <span className="text-zinc-500 dark:text-zinc-400">Finish: {llmResponse.finishReason}</span>
                     )}
                   </div>
-                  <div className="prose prose-invert max-w-none text-sm font-sans leading-relaxed text-zinc-200 whitespace-pre-wrap">
+                  <div className="prose prose-invert max-w-none text-sm font-sans leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">
                     {llmResponse.content}
                   </div>
                 </div>
@@ -1453,13 +1459,13 @@ function DashboardContent() {
         {/* ========================================================= */}
         {activeTab === "snapshot" && (
           <div className="space-y-6">
-            <div className="glass-card rounded-3xl p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border border-white/10">
+            <div className="glass-card rounded-3xl p-6 sm:p-8 flex flex-wrap items-center justify-between gap-4 border border-black/[0.06] dark:border-white/10">
               <div>
-                <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2.5">
-                  <Layers className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2.5">
+                  <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   <span>Consolidated Multi-Source Intelligence Snapshot</span>
                 </h3>
-                <p className="text-xs text-zinc-400 mt-1">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                   Triggers concurrent polling across arXiv preprints, zero-auth Reddit feeds, and Gmail Substack newsletters.
                 </p>
               </div>
@@ -1467,7 +1473,7 @@ function DashboardContent() {
               <button
                 onClick={fetchSnapshot}
                 disabled={snapshotLoading}
-                className="btn-white-pill rounded-full px-6 py-3 text-xs font-semibold flex items-center gap-2 shadow-xl disabled:opacity-50"
+                className="btn-white-pill rounded-full px-6 py-3 text-xs font-semibold flex items-center gap-2 shadow-md disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${snapshotLoading ? "animate-spin" : ""}`} />
                 <span>{snapshotLoading ? "Gathering Streams..." : "Refresh Snapshot"}</span>
@@ -1475,8 +1481,8 @@ function DashboardContent() {
             </div>
 
             {snapshotError && (
-              <div className="p-4 rounded-2xl bg-red-950/40 border border-red-500/30 text-red-300 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-400" />
+              <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500 dark:text-red-400" />
                 <span>{snapshotError}</span>
               </div>
             )}
@@ -1485,66 +1491,66 @@ function DashboardContent() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Column 1: arXiv Snapshot */}
-                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
-                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-                      <span className="text-xs font-mono font-bold text-blue-400 flex items-center gap-2">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-black/[0.06] dark:border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
                         <Cpu className="w-4 h-4" />
                         arXiv Feed
                       </span>
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                         {snapshotData.arxiv?.papers?.length || 0} papers
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.arxiv?.papers?.map((p: any) => (
-                        <div key={p.arxivId} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
-                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{p.title}</div>
-                          <div className="text-[10px] font-mono text-blue-400 mt-1.5">{p.primaryCategory}</div>
+                        <div key={p.arxivId} className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-black/30 border border-black/[0.05] dark:border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{p.title}</div>
+                          <div className="text-[10px] font-mono text-blue-600 dark:text-blue-400 mt-1.5">{p.primaryCategory}</div>
                         </div>
                       )) || <div className="text-zinc-500 text-xs font-mono">No papers loaded</div>}
                     </div>
                   </div>
 
                   {/* Column 2: Reddit Snapshot */}
-                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
-                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-                      <span className="text-xs font-mono font-bold text-orange-400 flex items-center gap-2">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-black/[0.06] dark:border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-orange-600 dark:text-orange-400 flex items-center gap-2">
                         <Radio className="w-4 h-4" />
                         Reddit Watcher
                       </span>
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-300 border border-orange-500/20">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/20">
                         {snapshotData.reddit?.posts?.length || 0} posts
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.reddit?.posts?.map((post: any) => (
-                        <div key={post.id} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
-                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{post.title}</div>
-                          <div className="text-[10px] font-mono text-orange-400 mt-1.5">{post.subreddit} • by {post.author}</div>
+                        <div key={post.id} className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-black/30 border border-black/[0.05] dark:border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{post.title}</div>
+                          <div className="text-[10px] font-mono text-orange-600 dark:text-orange-400 mt-1.5">{post.subreddit} • by {post.author}</div>
                         </div>
                       )) || <div className="text-zinc-500 text-xs font-mono">No posts loaded</div>}
                     </div>
                   </div>
 
                   {/* Column 3: Gmail Snapshot */}
-                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-white/[0.08]">
-                    <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-                      <span className="text-xs font-mono font-bold text-amber-400 flex items-center gap-2">
+                  <div className="glass-card rounded-2xl p-6 space-y-4 border border-black/[0.06] dark:border-white/[0.08]">
+                    <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
+                      <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
                         <Globe className="w-4 h-4" />
                         Substack Radar
                       </span>
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                         {snapshotData.gmail?.emails?.length || 0} issues
                       </span>
                     </div>
 
                     <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                       {snapshotData.gmail?.emails?.map((email: any) => (
-                        <div key={email.id} className="p-3.5 rounded-xl bg-black/30 border border-white/[0.05] text-xs">
-                          <div className="font-sans font-medium text-zinc-100 line-clamp-2">{email.subject}</div>
-                          <div className="text-[10px] font-mono text-amber-400 mt-1.5">{email.senderName || email.sender}</div>
+                        <div key={email.id} className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-black/30 border border-black/[0.05] dark:border-white/[0.05] text-xs">
+                          <div className="font-sans font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{email.subject}</div>
+                          <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 mt-1.5">{email.senderName || email.sender}</div>
                         </div>
                       )) || (
                         <div className="text-zinc-500 text-xs font-mono p-2">
@@ -1582,7 +1588,7 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#06080e] flex items-center justify-center text-xs font-mono text-zinc-400">
+        <div className="min-h-screen bg-[var(--bg-app)] text-zinc-500 flex items-center justify-center text-xs font-mono">
           Loading Command Center...
         </div>
       }
