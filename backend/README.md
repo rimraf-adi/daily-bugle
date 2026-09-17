@@ -16,24 +16,57 @@ cd backend
 # Sync dependencies and set up the virtual environment
 uv sync
 
-# Run the entrypoint
+# Run the demonstration entrypoint
 uv run main.py
+
+# Run unit tests
+uv run python -m unittest discover -s tests
 ```
 
 ## Modules
 
 ### `arxiv`
-The `arxiv` module provides utilities to search and fetch research papers from the official arXiv API.
+The `arxiv` module provides semantic, LLM-ready data structures and fetching utilities for building periodic newsletter updates.
 
+#### 1. Fetching a Newsletter Digest
 ```python
-from arxiv import search_papers, fetch_recent_papers
+from arxiv import fetch_newsletter_digest
 
-# Search papers by topic
-papers = search_papers("quantum computing", max_results=5)
+# Fetch latest papers across key categories (e.g. AI, ML, NLP)
+digest = fetch_newsletter_digest(
+    categories=["cs.AI", "cs.LG", "cs.CL"],
+    max_results=5,
+    topic="Daily AI & LLM Breakthroughs",
+)
 
-# Fetch recent AI papers
-ai_papers = fetch_recent_papers(category="cs.AI", max_results=5)
+# Ready-to-use LLM prompt with direct article links for drafting the newsletter
+prompt_for_llm = digest.to_llm_prompt()
 
-for paper in ai_papers:
-    print(f"[{paper.arxiv_id}] {paper.title} by {', '.join(paper.authors)}")
+# Token-efficient dictionary payload for LLMs
+llm_payload = digest.to_llm_payload()
+
+# Export full JSON
+print(digest.to_json(indent=2))
 ```
+
+#### 2. Semantic Paper Data Model
+Each `ArxivPaper` contains:
+- `arxiv_id`: Clean paper identifier (e.g. `2403.12345v1`)
+- `title`: Sanitized title
+- `abstract`: Full sanitized abstract
+- `authors`: List of author names
+- `published` & `updated`: ISO 8601 timestamps
+- `primary_category` & `primary_category_name`: Canonical category code and human-readable topic name
+- `categories` & `category_names`: All mapped topic classifications
+- `links`:
+  - `html`: Direct web HTML full-text link (`https://arxiv.org/html/{id}`)
+  - `pdf`: Direct PDF download link (`https://arxiv.org/pdf/{id}.pdf`)
+  - `abstract`: Abstract landing page (`https://arxiv.org/abs/{id}`)
+  - `full_article`: Preferred link for full article reading
+- `comment`, `journal_ref`, `doi`: Associated publication metadata
+
+#### Output Formats:
+- `.to_dict()`: Clean dictionary.
+- `.to_json()`: Standard JSON string.
+- `.to_llm_context()`: Token-optimized dictionary designed specifically for LLM prompt context injection.
+- `.to_markdown()`: Markdown block with clickable full-article links.

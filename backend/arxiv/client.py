@@ -3,34 +3,20 @@ from __future__ import annotations
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Union
+
+from .models import CATEGORY_MAP, ArxivPaper, NewsletterDigest, PaperLinks
 
 ATOM_NS = "{http://www.w3.org/2005/Atom}"
 ARXIV_NS = "{http://arxiv.org/schemas/atom}"
 
 
-@dataclass
-class ArxivPaper:
-    """Represents a research paper fetched from arXiv."""
-    arxiv_id: str
-    title: str
-    summary: str
-    authors: List[str] = field(default_factory=list)
-    published: Optional[str] = None
-    updated: Optional[str] = None
-    entry_url: Optional[str] = None
-    pdf_url: Optional[str] = None
-    primary_category: Optional[str] = None
-    categories: List[str] = field(default_factory=list)
-
-
 class ArxivClient:
-    """Client to query the arXiv API."""
+    """Client to query the arXiv API and produce semantic, LLM-ready data."""
 
     BASE_URL = "http://export.arxiv.org/api/query"
 
-    def __init__(self, base_url: str = BASE_URL, timeout: int = 15):
+    def __init__(self, base_url: str = BASE_URL, timeout: int = 20):
         self.base_url = base_url
         self.timeout = timeout
 
@@ -61,7 +47,7 @@ class ArxivClient:
         url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "DailyBugleArxivClient/1.0 (mailto:dailybugle@example.com)"},
+            headers={"User-Agent": "DailyBugleNewsletter/1.0 (mailto:dailybugle@example.com)"},
         )
 
         with urllib.request.urlopen(req, timeout=self.timeout) as response:
@@ -69,8 +55,46 @@ class ArxivClient:
 
         return self.parse_feed(content)
 
-    def parse_feed(self, xml_content: bytes | str) -> List[ArxivPaper]:
-        """Parse raw Atom XML feed returned by the arXiv API into ArxivPaper instances."""
+    def fetch_newsletter_digest(
+        self,
+        categories: Union[List[str], str] = ("cs.AI", "cs.LG", "cs.CL"),
+        max_results: int = 10,
+        topic: Optional[str] = None,
+        sort_by: str = "submittedDate",
+    ) -> NewsletterDigest:
+        """
+        Fetch a curated batch of recent papers across one or more categories,
+        packaged as an LLM-ready NewsletterDigest.
+
+        :param categories: Single category string or list of categories (e.g. ["cs.AI", "cs.LG"]).
+        :param max_results: Number of papers to fetch.
+        :param topic: Optional descriptive topic name for the newsletter.
+        :param sort_by: "submittedDate", "lastUpdatedDate", or "relevance".
+        """
+        if isinstance(categories, str):
+            cat_list = [categories]
+        else:
+            cat_list = list(categories)
+
+        # Build arXiv category query, e.g. "cat:cs.AI OR cat:cs.LG"
+        query = " OR ".join(f"cat:{c}" for c in cat_list)
+
+        if not topic:
+            cat_readable = [CATEGORY_MAP.get(c, c) for c in cat_list]
+            topic = f"Latest Updates in {', '.join(cat_readable)}"
+
+        papers = self.search(
+            query=query,
+            start=0,
+            max_results=max_results,
+            sort_by=sort_by,
+            sort_order="descending",
+        )
+
+        return NewsletterDigest(topic=topic, papers=papers)
+
+    def parse_feed(self, xml_content: Union[bytes, str]) -> List[ArxivPaper]:
+        """Parse raw Atom XML feed returned by arXiv API into semantic ArxivPaper instances."""
         if isinstance(xml_content, str):
             xml_content = xml_content.encode("utf-8")
 
@@ -86,7 +110,7 @@ class ArxivClient:
             title = " ".join((title_el.text or "").split()) if title_el is not None else ""
 
             summary_el = entry.find(f"{ATOM_NS}summary")
-            summary = " ".join((summary_el.text or "").split()) if summary_el is not None else ""
+            abstract = " ".join((summary_el.text or "").split()) if summary_el is not None else ""
 
             authors = []
             for author_el in entry.findall(f"{ATOM_NS}author"):
@@ -100,6 +124,7 @@ class ArxivClient:
             updated_el = entry.find(f"{ATOM_NS}updated")
             updated = updated_el.text.strip() if updated_el is not None and updated_el.text else None
 
+            # Links
             entry_url = None
             pdf_url = None
             for link in entry.findall(f"{ATOM_NS}link"):
@@ -111,34 +136,61 @@ class ArxivClient:
                 elif title_attr == "pdf" and href:
                     pdf_url = href
 
-            if not entry_url and raw_id:
-                entry_url = raw_id
-            if not pdf_url and arxiv_id:
-                pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+            abs_link = entry_url or f"https://arxiv.org/abs/{arxiv_id}"
+            pdf_link = pdf_url or f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+            html_link = f"https://arxiv.org/html/{arxiv_id}"
 
+            links = PaperLinks(
+                abstract=abs_link,
+                pdf=pdf_link,
+                html=html_link,
+                full_article=html_link,  # arXiv HTML view is ideal for reading and LLM parsing
+            )
+
+            # Metadata & Categories
             primary_cat_el = entry.find(f"{ARXIV_NS}primary_category")
             primary_category = (
                 primary_cat_el.attrib.get("term") if primary_cat_el is not None else None
             )
 
-            categories = []
+            categories: List[str] = []
             for cat_el in entry.findall(f"{ATOM_NS}category"):
                 term = cat_el.attrib.get("term")
-                if term:
+                if term and term not in categories:
                     categories.append(term)
+
+            if not primary_category and categories:
+                primary_category = categories[0]
+
+            primary_category_name = CATEGORY_MAP.get(primary_category) if primary_category else None
+            category_names = [CATEGORY_MAP.get(c, c) for c in categories]
+
+            # Additional metadata (comments, journal ref, doi)
+            comment_el = entry.find(f"{ARXIV_NS}comment")
+            comment = " ".join((comment_el.text or "").split()) if comment_el is not None and comment_el.text else None
+
+            journal_el = entry.find(f"{ARXIV_NS}journal_ref")
+            journal_ref = " ".join((journal_el.text or "").split()) if journal_el is not None and journal_el.text else None
+
+            doi_el = entry.find(f"{ARXIV_NS}doi")
+            doi = doi_el.text.strip() if doi_el is not None and doi_el.text else None
 
             papers.append(
                 ArxivPaper(
                     arxiv_id=arxiv_id,
                     title=title,
-                    summary=summary,
+                    abstract=abstract,
                     authors=authors,
                     published=published,
                     updated=updated,
-                    entry_url=entry_url,
-                    pdf_url=pdf_url,
                     primary_category=primary_category,
+                    primary_category_name=primary_category_name,
                     categories=categories,
+                    category_names=category_names,
+                    comment=comment,
+                    journal_ref=journal_ref,
+                    doi=doi,
+                    links=links,
                 )
             )
 
@@ -176,4 +228,17 @@ def fetch_recent_papers(
         max_results=max_results,
         sort_by="submittedDate",
         sort_order="descending",
+    )
+
+
+def fetch_newsletter_digest(
+    categories: Union[List[str], str] = ("cs.AI", "cs.LG", "cs.CL"),
+    max_results: int = 10,
+    topic: Optional[str] = None,
+) -> NewsletterDigest:
+    """Fetch a newsletter digest ready for LLM consumption with links to full articles."""
+    return default_client.fetch_newsletter_digest(
+        categories=categories,
+        max_results=max_results,
+        topic=topic,
     )
