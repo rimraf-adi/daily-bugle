@@ -6,6 +6,10 @@ from arxiv import (
     NewsletterDigest,
     PaperLinks,
     CATEGORY_MAP,
+    get_categories_by_subject,
+    get_category_name,
+    list_subjects,
+    search_categories,
 )
 
 SAMPLE_ARXIV_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -94,6 +98,42 @@ class TestArxivModule(unittest.TestCase):
         digest_json = digest.to_json()
         digest_dict = json.loads(digest_json)
         self.assertEqual(digest_dict["total_papers"], 1)
+
+    def test_complete_category_taxonomy(self):
+        # Verify all 8 core disciplines are represented in SUBJECT_TAXONOMY
+        subjects = list_subjects()
+        self.assertIn("Computer Science", subjects)
+        self.assertIn("Mathematics", subjects)
+        self.assertIn("Physics - Astrophysics", subjects)
+        self.assertIn("Physics - Condensed Matter", subjects)
+        self.assertIn("Physics - Quantum Physics", subjects)
+        self.assertIn("Quantitative Biology", subjects)
+        self.assertIn("Quantitative Finance", subjects)
+        self.assertIn("Statistics", subjects)
+        self.assertIn("Electrical Engineering and Systems Science", subjects)
+        self.assertIn("Economics", subjects)
+
+        # Check resolution across all domains
+        self.assertEqual(get_category_name("cs.AI"), "Artificial Intelligence")
+        self.assertEqual(get_category_name("astro-ph.CO"), "Cosmology and Nongalactic Astrophysics")
+        self.assertEqual(get_category_name("math.PR"), "Probability")
+        self.assertEqual(get_category_name("q-bio.NC"), "Neurons and Cognition")
+        self.assertEqual(get_category_name("q-fin.ST"), "Statistical Finance")
+        self.assertEqual(get_category_name("stat.ML"), "Machine Learning (Statistics)")
+        self.assertEqual(get_category_name("eess.SP"), "Signal Processing")
+        self.assertEqual(get_category_name("econ.EM"), "Econometrics")
+
+        # Test search
+        econ_results = search_categories("econometrics")
+        self.assertIn("econ.EM", econ_results)
+
+        quantum_results = search_categories("quantum")
+        self.assertIn("quant-ph", quantum_results)
+
+        # Test subject retrieval
+        cs_cats = get_categories_by_subject("Computer Science")
+        self.assertIn("cs.AI", cs_cats)
+        self.assertIn("cs.RO", cs_cats)
 
 
 if __name__ == "__main__":

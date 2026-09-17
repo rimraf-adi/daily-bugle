@@ -1,0 +1,268 @@
+"""
+Complete arXiv Subject & Category Taxonomy.
+
+Contains all 8 main disciplines, groups, and ~175 subcategories supported by arXiv:
+- Physics (Astrophysics, Condensed Matter, GR-QC, HEP, Math-Phys, Nonlinear, Nuclear, Physics, Quant-Ph)
+- Mathematics (math.*)
+- Computer Science (cs.*)
+- Quantitative Biology (q-bio.*)
+- Quantitative Finance (q-fin.*)
+- Statistics (stat.*)
+- Electrical Engineering and Systems Science (eess.*)
+- Economics (econ.*)
+"""
+
+from typing import Dict, List, Optional
+
+SUBJECT_TAXONOMY: Dict[str, Dict[str, str]] = {
+    "Physics - Astrophysics": {
+        "astro-ph": "Astrophysics (General)",
+        "astro-ph.GA": "Astrophysics of Galaxies",
+        "astro-ph.CO": "Cosmology and Nongalactic Astrophysics",
+        "astro-ph.EP": "Earth and Planetary Astrophysics",
+        "astro-ph.HE": "High Energy Astrophysical Phenomena",
+        "astro-ph.IM": "Instrumentation and Methods for Astrophysics",
+        "astro-ph.SR": "Solar and Stellar Astrophysics",
+    },
+    "Physics - Condensed Matter": {
+        "cond-mat": "Condensed Matter (General)",
+        "cond-mat.dis-nn": "Disordered Systems and Neural Networks",
+        "cond-mat.mtrl-sci": "Materials Science",
+        "cond-mat.mes-hall": "Mesoscale and Nanoscale Physics",
+        "cond-mat.other": "Other Condensed Matter",
+        "cond-mat.quant-gas": "Quantum Gases",
+        "cond-mat.soft": "Soft Condensed Matter",
+        "cond-mat.stat-mech": "Statistical Mechanics",
+        "cond-mat.str-el": "Strongly Correlated Electrons",
+        "cond-mat.supr-con": "Superconductivity",
+    },
+    "Physics - General Relativity and Quantum Cosmology": {
+        "gr-qc": "General Relativity and Quantum Cosmology",
+    },
+    "Physics - High Energy Physics": {
+        "hep-ex": "High Energy Physics - Experiment",
+        "hep-lat": "High Energy Physics - Lattice",
+        "hep-ph": "High Energy Physics - Phenomenology",
+        "hep-th": "High Energy Physics - Theory",
+    },
+    "Physics - Mathematical Physics": {
+        "math-ph": "Mathematical Physics",
+    },
+    "Physics - Nonlinear Sciences": {
+        "nlin": "Nonlinear Sciences (General)",
+        "nlin.AO": "Adaptation and Self-Organizing Systems",
+        "nlin.CG": "Cellular Automata and Lattice Gases",
+        "nlin.CD": "Chaotic Dynamics",
+        "nlin.SI": "Exactly Solvable and Integrable Systems",
+        "nlin.PS": "Pattern Formation and Solitons",
+    },
+    "Physics - Nuclear": {
+        "nucl-ex": "Nuclear Experiment",
+        "nucl-th": "Nuclear Theory",
+    },
+    "Physics - General & Applied": {
+        "physics": "Physics (General)",
+        "physics.acc-ph": "Accelerator Physics",
+        "physics.app-ph": "Applied Physics",
+        "physics.ao-ph": "Atmospheric and Oceanic Physics",
+        "physics.atm-clus": "Atomic and Molecular Clusters",
+        "physics.atom-ph": "Atomic Physics",
+        "physics.bio-ph": "Biological Physics",
+        "physics.chem-ph": "Chemical Physics",
+        "physics.class-ph": "Classical Physics",
+        "physics.comp-ph": "Computational Physics",
+        "physics.data-an": "Data Analysis, Statistics and Probability",
+        "physics.flu-dyn": "Fluid Dynamics",
+        "physics.gen-ph": "General Physics",
+        "physics.geo-ph": "Geophysics",
+        "physics.hist-ph": "History and Philosophy of Physics",
+        "physics.ins-det": "Instrumentation and Detectors",
+        "physics.med-ph": "Medical Physics",
+        "physics.optics": "Optics",
+        "physics.soc-ph": "Physics and Society",
+        "physics.ed-ph": "Physics Education",
+        "physics.plasm-ph": "Plasma Physics",
+        "physics.pop-ph": "Popular Physics",
+        "physics.space-ph": "Space Physics",
+    },
+    "Physics - Quantum Physics": {
+        "quant-ph": "Quantum Physics",
+    },
+    "Mathematics": {
+        "math": "Mathematics (General)",
+        "math.AG": "Algebraic Geometry",
+        "math.AT": "Algebraic Topology",
+        "math.AP": "Analysis of PDEs",
+        "math.CT": "Category Theory",
+        "math.CA": "Classical Analysis and ODEs",
+        "math.CO": "Combinatorics",
+        "math.AC": "Commutative Algebra",
+        "math.CV": "Complex Variables",
+        "math.DG": "Differential Geometry",
+        "math.DS": "Dynamical Systems",
+        "math.FA": "Functional Analysis",
+        "math.GM": "General Mathematics",
+        "math.GN": "General Topology",
+        "math.GT": "Geometric Topology",
+        "math.GR": "Group Theory",
+        "math.HO": "History and Overview",
+        "math.IT": "Information Theory (Math)",
+        "math.KT": "K-Theory and Homology",
+        "math.LO": "Logic (Math)",
+        "math.MP": "Mathematical Physics",
+        "math.MG": "Metric Geometry",
+        "math.NT": "Number Theory",
+        "math.NA": "Numerical Analysis (Math)",
+        "math.OA": "Operator Algebras",
+        "math.OC": "Optimization and Control",
+        "math.PR": "Probability",
+        "math.QA": "Quantum Algebra",
+        "math.RT": "Representation Theory",
+        "math.RA": "Rings and Algebras",
+        "math.SP": "Spectral Theory",
+        "math.ST": "Statistics Theory (Math)",
+        "math.SG": "Symplectic Geometry",
+    },
+    "Computer Science": {
+        "cs": "Computer Science (General)",
+        "cs.AI": "Artificial Intelligence",
+        "cs.CL": "Computation and Language (NLP)",
+        "cs.CC": "Computational Complexity",
+        "cs.CE": "Computational Engineering, Finance, and Science",
+        "cs.CG": "Computational Geometry",
+        "cs.GT": "Computer Science and Game Theory",
+        "cs.CV": "Computer Vision and Pattern Recognition",
+        "cs.CY": "Computers and Society",
+        "cs.CR": "Cryptography and Security",
+        "cs.DS": "Data Structures and Algorithms",
+        "cs.DB": "Databases",
+        "cs.DL": "Digital Libraries",
+        "cs.DM": "Discrete Mathematics",
+        "cs.DC": "Distributed, Parallel, and Cluster Computing",
+        "cs.ET": "Emerging Technologies",
+        "cs.FL": "Formal Languages and Automata Theory",
+        "cs.GL": "General Literature",
+        "cs.GR": "Graphics",
+        "cs.AR": "Hardware Architecture",
+        "cs.HC": "Human-Computer Interaction",
+        "cs.IR": "Information Retrieval",
+        "cs.IT": "Information Theory (CS)",
+        "cs.LO": "Logic in Computer Science",
+        "cs.LG": "Machine Learning",
+        "cs.MS": "Mathematical Software",
+        "cs.MA": "Multiagent Systems",
+        "cs.MM": "Multimedia",
+        "cs.NI": "Networking and Internet Architecture",
+        "cs.NE": "Neural and Evolutionary Computing",
+        "cs.NA": "Numerical Analysis (CS)",
+        "cs.OS": "Operating Systems",
+        "cs.OH": "Other Computer Science",
+        "cs.PF": "Performance",
+        "cs.PL": "Programming Languages",
+        "cs.RO": "Robotics",
+        "cs.SI": "Social and Information Networks",
+        "cs.SE": "Software Engineering",
+        "cs.SD": "Sound",
+        "cs.SC": "Symbolic Computation",
+        "cs.SY": "Systems and Control (CS)",
+    },
+    "Quantitative Biology": {
+        "q-bio": "Quantitative Biology (General)",
+        "q-bio.BM": "Biomolecules",
+        "q-bio.CB": "Cell Behavior",
+        "q-bio.GN": "Genomics",
+        "q-bio.MN": "Molecular Networks",
+        "q-bio.NC": "Neurons and Cognition",
+        "q-bio.OT": "Other Quantitative Biology",
+        "q-bio.PE": "Populations and Evolution",
+        "q-bio.QM": "Quantitative Methods",
+        "q-bio.SC": "Subcellular Processes",
+        "q-bio.TO": "Tissues and Organs",
+    },
+    "Quantitative Finance": {
+        "q-fin": "Quantitative Finance (General)",
+        "q-fin.CP": "Computational Finance",
+        "q-fin.EC": "Economics (Finance)",
+        "q-fin.GN": "General Finance",
+        "q-fin.MF": "Mathematical Finance",
+        "q-fin.PM": "Portfolio Management",
+        "q-fin.PR": "Pricing of Securities",
+        "q-fin.RM": "Risk Management",
+        "q-fin.ST": "Statistical Finance",
+        "q-fin.TR": "Trading and Market Microstructure",
+    },
+    "Statistics": {
+        "stat": "Statistics (General)",
+        "stat.AP": "Applications",
+        "stat.CO": "Computation",
+        "stat.ML": "Machine Learning (Statistics)",
+        "stat.ME": "Methodology",
+        "stat.OT": "Other Statistics",
+        "stat.TH": "Statistics Theory",
+    },
+    "Electrical Engineering and Systems Science": {
+        "eess": "Electrical Engineering and Systems Science (General)",
+        "eess.AS": "Audio and Speech Processing",
+        "eess.IV": "Image and Video Processing",
+        "eess.SP": "Signal Processing",
+        "eess.SY": "Systems and Control (EESS)",
+    },
+    "Economics": {
+        "econ": "Economics (General)",
+        "econ.EM": "Econometrics",
+        "econ.GN": "General Economics",
+        "econ.TH": "Theoretical Economics",
+    },
+}
+
+# Flattened master lookup dictionary: code -> Human-Readable Name
+CATEGORY_MAP: Dict[str, str] = {}
+for _group_name, _cats in SUBJECT_TAXONOMY.items():
+    CATEGORY_MAP.update(_cats)
+
+
+def get_category_name(category_code: str) -> str:
+    """
+    Get the human-readable name of an arXiv category code.
+    Falls back to the code itself if not found.
+    """
+    return CATEGORY_MAP.get(category_code.strip(), category_code.strip())
+
+
+def search_categories(query: str) -> Dict[str, str]:
+    """
+    Search categories by keyword across code and descriptive name.
+    Useful for interactive newsletter setup and topic discovery.
+    """
+    q = query.lower().strip()
+    return {
+        code: name
+        for code, name in CATEGORY_MAP.items()
+        if q in code.lower() or q in name.lower()
+    }
+
+
+def get_categories_by_subject(subject_prefix: str) -> Dict[str, str]:
+    """
+    Get all subcategories under a specific discipline or prefix.
+    e.g. 'Computer Science', 'Physics', 'math', 'q-bio'.
+    """
+    results: Dict[str, str] = {}
+    normalized_prefix = subject_prefix.lower().strip()
+
+    for subject, cats in SUBJECT_TAXONOMY.items():
+        if normalized_prefix in subject.lower():
+            results.update(cats)
+
+    if not results:
+        # Fallback to checking code prefixes (e.g. 'cs', 'math', 'econ')
+        for code, name in CATEGORY_MAP.items():
+            if code.lower().startswith(normalized_prefix):
+                results[code] = name
+
+    return results
+
+
+def list_subjects() -> List[str]:
+    """Return all high-level subject groups in the taxonomy."""
+    return list(SUBJECT_TAXONOMY.keys())

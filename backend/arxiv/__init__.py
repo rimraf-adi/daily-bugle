@@ -1,10 +1,18 @@
 """
 arXiv module for Daily Bugle.
 
-Provides semantic, LLM-ready data structures and fetching utilities for research papers,
-tailored for building newsletter managers and periodic digest updates.
+Provides semantic, LLM-ready data structures, fetching utilities, and complete
+category taxonomies across all 8 arXiv disciplines.
 """
 
+from .categories import (
+    CATEGORY_MAP,
+    SUBJECT_TAXONOMY,
+    get_categories_by_subject,
+    get_category_name,
+    list_subjects,
+    search_categories,
+)
 from .client import (
     ArxivClient,
     fetch_newsletter_digest,
@@ -12,7 +20,6 @@ from .client import (
     search_papers,
 )
 from .models import (
-    CATEGORY_MAP,
     ArxivPaper,
     NewsletterDigest,
     PaperLinks,
@@ -24,6 +31,11 @@ __all__ = [
     "PaperLinks",
     "NewsletterDigest",
     "CATEGORY_MAP",
+    "SUBJECT_TAXONOMY",
+    "get_category_name",
+    "search_categories",
+    "get_categories_by_subject",
+    "list_subjects",
     "fetch_newsletter_digest",
     "fetch_recent_papers",
     "search_papers",

@@ -70,3 +70,30 @@ Each `ArxivPaper` contains:
 - `.to_json()`: Standard JSON string.
 - `.to_llm_context()`: Token-optimized dictionary designed specifically for LLM prompt context injection.
 - `.to_markdown()`: Markdown block with clickable full-article links.
+
+#### 3. Complete arXiv Taxonomy & Search (166 Categories)
+The module includes the full arXiv taxonomy spanning all 8 core disciplines (Physics, Math, Computer Science, Quantitative Biology, Quantitative Finance, Statistics, EESS, Economics):
+
+```python
+from arxiv import (
+    CATEGORY_MAP,
+    SUBJECT_TAXONOMY,
+    get_category_name,
+    search_categories,
+    get_categories_by_subject,
+    list_subjects,
+)
+
+# Search categories by keyword
+matches = search_categories("quantum")
+# e.g., {'quant-ph': 'Quantum Physics', 'cond-mat.quant-gas': 'Quantum Gases', 'math.QA': 'Quantum Algebra'}
+
+# Get all categories for a subject
+econ_cats = get_categories_by_subject("Economics")
+# {'econ.EM': 'Econometrics', 'econ.GN': 'General Economics', 'econ.TH': 'Theoretical Economics'}
+
+# Look up human-readable name
+name = get_category_name("astro-ph.CO")
+# 'Cosmology and Nongalactic Astrophysics'
+```
+
