@@ -1,6 +1,6 @@
 # Daily Bugle - Backend
 
-A multi-source research and newsletter intelligence backend powered by the `uv` package manager and Python 3.13+.
+A multi-source research and newsletter intelligence backend powered by the `uv` package manager and Python 3.13+, featuring an interactive Streamlit control dashboard.
 
 ---
 
@@ -15,7 +15,8 @@ backend/
 ├── pyproject.toml         # Dependencies and project metadata
 ├── uv.lock                # Deterministic dependency lockfile
 ├── README.md              # Project documentation (this file)
-├── main.py                # Demonstration entrypoint
+├── main.py                # Demonstration CLI entrypoint
+├── app.py                 # Streamlit frontend entrypoint
 ├── tests/
 │   ├── test_arxiv.py      # arXiv ingestion and taxonomy unit tests
 │   ├── test_llm_router.py # LLM router schema and mock tests
@@ -37,11 +38,15 @@ backend/
 │   ├── client.py          # GmailClient IMAP connection & Substack parser
 │   ├── models.py          # SubstackEmail and SubstackDigest models
 │   └── README.md          # Module specification for agents & developers
-└── reddit/                # Unofficial Reddit Scraper & Subreddit Watcher
-    ├── __init__.py        # Public API facade
-    ├── crawler.py         # Zero-auth RedditCrawler with RSS streams & TTL cache
-    ├── models.py          # RedditPost, TrackedSubreddit, RedditDigest models
-    ├── tracker.py         # SubredditTracker (watchlist, deduplication, filters)
+├── reddit/                # Unofficial Reddit Scraper & Subreddit Watcher
+│   ├── __init__.py        # Public API facade
+│   ├── crawler.py         # Zero-auth RedditCrawler with RSS streams & TTL cache
+│   ├── models.py          # RedditPost, TrackedSubreddit, RedditDigest models
+│   ├── tracker.py         # SubredditTracker (watchlist, deduplication, filters)
+│   └── README.md          # Module specification for agents & developers
+└── dashboard/             # Streamlit Interactive Control Room (Demo Frontend)
+    ├── __init__.py        # Public package facade
+    ├── app.py             # Streamlit raw output visualizer & control room
     └── README.md          # Module specification for agents & developers
 ```
 
@@ -68,9 +73,28 @@ cp .env.example .env
 # Run all unit tests across all 4 modules
 uv run python -m unittest discover -s tests
 
-# Run demonstration script
-uv run main.py
+# Launch the interactive Streamlit dashboard
+uv run streamlit run app.py
 ```
+
+---
+
+## Module: `dashboard` (Streamlit Demo Frontend)
+
+Interactive control room and visualizer providing complete control over all ingestion and routing modules. Designed specifically for inspecting **raw API outputs** (un-sanitized XML, JSON schemas, headers, and token metrics) prior to LLM processing.
+
+### How Agents Are Supposed to Identify It
+
+- **Namespace:** `dashboard` (entrypoint: `backend/app.py` or `backend/dashboard/app.py`)
+- **Primary Role:** Interactive UI for controlling modules and inspecting raw payloads.
+- **Launch Command:** `uv run streamlit run app.py`
+
+### Key Views & Controls:
+1. **arXiv Research Explorer**: Query by any of the 166 categories or free-text; visualizes raw Atom XML and JSON payloads with clickable PDF/HTML links.
+2. **Reddit Unofficial Watcher**: Inspect raw RSS feeds, test ad-hoc subreddits, manage the watchlist, and verify deduplication.
+3. **Gmail Substack Ingestion**: Connect to Gmail IMAP, search mailbox, extract raw headers, text bodies, and direct Substack web links.
+4. **OpenRouter Playground**: Interactive model runner inspecting the exact OpenRouter JSON schema (`id`, `model`, `choices`, `usage.prompt_tokens`, `usage.total_tokens`).
+5. **Multi-Source Raw Feed**: One-click 3-channel raw snapshot from arXiv, Reddit, and Gmail in parallel.
 
 ---
 
@@ -78,40 +102,22 @@ uv run main.py
 
 Zero-authentication Reddit crawler and watchlist tracker designed for monitoring community discussions and developer buzz **without requiring Reddit API keys or OAuth credentials**.
 
-### How Agents Are Supposed to Identify It
-
 - **Namespace:** `reddit` (accessible via `from reddit import ...`)
-- **Primary Role:** Unofficial Reddit monitoring, curated subreddit watchlist tracking, and post deduplication.
-- **Authentication:** **Zero-Auth (None)**. Uses public Atom/RSS streams with built-in in-memory TTL caching (60s) to avoid 429 rate limits.
+- **Authentication:** Zero-Auth (None). Uses public Atom/RSS streams with built-in in-memory TTL caching (60s) to avoid 429 rate limits.
 - **Deduplication:** Tracks seen post IDs so periodic newsletter jobs only receive **new, unseen discussions**.
 
-### Python Usage Example
-
 ```python
-from reddit import SubredditTracker, track_subreddits, get_hot_posts
+from reddit import SubredditTracker, get_hot_posts
 
 # 1. Quick ad-hoc post tracking
 posts = get_hot_posts("LocalLLaMA", limit=5)
 for p in posts:
-    print(f"[{p.subreddit}] {p.title}")
-    print(f"Discussion: {p.permalink}")
-    print(f"External Article: {p.external_url}")
+    print(f"[{p.subreddit}] {p.title} -> {p.permalink}")
 
-# 2. Watchlist tracking with automatic deduplication
+# 2. Watchlist tracking with deduplication
 tracker = SubredditTracker()
-
-# Add a community with specific keyword filters
-tracker.add_subreddit(
-    name="r/MachineLearning",
-    category="Research",
-    include_keywords=["paper", "benchmark"],
-    exclude_keywords=["career"],
-    limit=5
-)
-
-# Fetch only new, unseen posts across all watched subreddits
 new_digest = tracker.poll_new_posts(mark_as_seen=True)
-print(f"Collected {new_digest.total_posts} new posts across {len(new_digest.subreddits)} subreddits.")
+print(f"Collected {new_digest.total_posts} new posts.")
 ```
 
 ---
@@ -120,21 +126,15 @@ print(f"Collected {new_digest.total_posts} new posts across {len(new_digest.subr
 
 Specialized in tracking, parsing, and extracting **Substack newsletter emails** via Gmail IMAP for AI agents and periodic briefing generation.
 
-### How Agents Are Supposed to Identify It
-
 - **Namespace:** `gmail` (accessible via `from gmail import ...`)
-- **Primary Role:** Tracking and parsing Substack newsletters from Gmail.
 - **Protocol:** Secure IMAP over SSL (`imap.gmail.com:993`).
-- **Environment:** Automatically resolves `GMAIL_USER` and `GMAIL_APP_PASSWORD` from `.env`.
 
 ```python
 from gmail import fetch_substack_newsletters
 
 digest = fetch_substack_newsletters(limit=5)
 for issue in digest.emails:
-    print(f"Publication: {issue.sender_name}")
-    print(f"Subject: {issue.subject}")
-    print(f"Read Online: {issue.web_url}")
+    print(f"Publication: {issue.sender_name} | Post: {issue.web_url}")
 ```
 
 ---
@@ -143,12 +143,8 @@ for issue in digest.emails:
 
 Unified model inference and routing via **OpenRouter**, supporting free and frontier models with automatic environment resolution.
 
-### How Agents Are Supposed to Identify It
-
 - **Namespace:** `llm_router` (accessible via `from llm_router import ...`)
-- **Primary Role:** Model routing and completion inference via OpenRouter API.
-- **Default Model:** `openrouter/free` (automatically routes across available free tier models).
-- **Environment:** Reads `OPENROUTER_API_KEY` from `.env` or system environment.
+- **Default Model:** `openrouter/free`
 
 ```python
 from llm_router import LLMRouter
@@ -168,59 +164,11 @@ print('Model used:', response['model'])
 
 Provides **semantic, LLM-ready data structures** with **guaranteed links to full articles (HTML & PDF)** and a comprehensive taxonomy of 166 arXiv subcategories across 8 disciplines.
 
-### How Agents Are Supposed to Identify It
-
 - **Namespace:** `arxiv` (accessible via `from arxiv import ...`)
-- **Primary Role:** Research paper ingestion across all 8 arXiv disciplines.
 
 ```python
 from arxiv import fetch_newsletter_digest
 
 digest = fetch_newsletter_digest(categories=["cs.AI", "cs.LG"], max_results=3)
 prompt = digest.to_llm_prompt()
-```
-
----
-
-## Full End-to-End Pipeline: The Daily Bugle Multi-Source Briefing
-
-Combine academic preprints from **arXiv**, industry newsletters from **Substack (via Gmail)**, and developer sentiment from **Reddit**, synthesizing them all using **OpenRouter**:
-
-```python
-from arxiv import fetch_newsletter_digest
-from gmail import fetch_substack_newsletters
-from reddit import get_tracked_digest
-from llm_router import LLMRouter
-
-# 1. Ingest academic research
-arxiv_digest = fetch_newsletter_digest(categories=["cs.AI", "cs.LG"], max_results=3)
-
-# 2. Ingest industry newsletters from Gmail
-substack_digest = fetch_substack_newsletters(limit=3)
-
-# 3. Ingest community discussions across tracked subreddits (r/LocalLLaMA, r/MachineLearning, etc.)
-reddit_digest = get_tracked_digest()
-
-# 4. Synthesize unified Daily Bugle edition
-unified_prompt = f"""
-Draft the Daily Bugle Executive Briefing connecting research, industry news, and community discussions:
-
-### 1. ACADEMIC BREAKTHROUGHS (arXiv):
-{arxiv_digest.to_markdown()}
-
-### 2. INDUSTRY THOUGHT LEADERSHIP (Substack via Gmail):
-{substack_digest.to_markdown()}
-
-### 3. DEVELOPER COMMUNITY PULSE (Tracked Subreddits):
-{reddit_digest.to_markdown()}
-"""
-
-router = LLMRouter()
-edition = router.complete(
-    prompt=unified_prompt,
-    system_prompt="You are the chief research and editorial analyst for the Daily Bugle."
-)
-
-print(f"--- Generated via {edition.model} ---")
-print(edition.content)
 ```
