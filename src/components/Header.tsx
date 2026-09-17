@@ -74,13 +74,8 @@ export function Header() {
             })}
           </nav>
 
-          {/* Right Action, Live Status & Theme Toggle */}
+          {/* Right Action & Theme Toggle */}
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-terracotta)]/10 border border-[var(--accent-terracotta)]/25 text-[var(--accent-terracotta)] text-xs font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
-              <span className="hidden lg:inline text-[11px] font-medium">Finite Briefing</span>
-            </div>
-
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
@@ -123,17 +118,13 @@ export function Header() {
                   {link.name}
                 </Link>
               ))}
-              <div className="pt-3 mt-2 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[var(--accent-terracotta)] text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
-                  <span>Finite Edition</span>
-                </div>
+              <div className="pt-3 mt-2 border-t border-black/10 dark:border-white/10">
                 <Link
                   href="/edition"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold btn-editorial-terracotta"
+                  className="w-full py-2 rounded-full text-xs font-semibold btn-editorial-terracotta text-center block"
                 >
-                  Read Edition
+                  Read Today's Edition
                 </Link>
               </div>
             </div>
