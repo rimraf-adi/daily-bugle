@@ -1,6 +1,7 @@
 import json
 import time
 from pathlib import Path
+import requests
 import streamlit as st
 
 # Import Daily Bugle modules
@@ -89,7 +90,6 @@ def render_dashboard() -> None:
             with st.spinner("Fetching raw Atom feed from arXiv API..."):
                 t0 = time.time()
                 client = ArxivClient(timeout=20)
-                import urllib.parse, urllib.request
                 params = {
                     "search_query": search_query,
                     "start": 0,
@@ -97,18 +97,17 @@ def render_dashboard() -> None:
                     "sortBy": sort_by,
                     "sortOrder": sort_order,
                 }
-                raw_url = f"{client.BASE_URL}?{urllib.parse.urlencode(params)}"
-                req = urllib.request.Request(raw_url, headers={"User-Agent": "DailyBugleDashboard/1.0"})
+                headers = {"User-Agent": "DailyBugleDashboard/1.0"}
                 try:
-                    with urllib.request.urlopen(req, timeout=20) as resp:
-                        raw_xml_bytes = resp.read()
-                    
-                    parsed_papers = client.parse_feed(raw_xml_bytes)
+                    resp = requests.get(client.BASE_URL, params=params, headers=headers, timeout=20)
+                    resp.raise_for_status()
+                    raw_xml_text = resp.text
+                    parsed_papers = client.parse_feed(resp.content)
                     latency = time.time() - t0
                     st.session_state["arxiv_cached_data"] = {
                         "papers": parsed_papers,
-                        "raw_xml": raw_xml_bytes.decode("utf-8", errors="replace"),
-                        "url": raw_url,
+                        "raw_xml": raw_xml_text,
+                        "url": resp.url,
                         "latency": latency,
                         "query": search_query,
                     }

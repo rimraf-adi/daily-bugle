@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Union
+
+import requests
 
 from .models import CATEGORY_MAP, ArxivPaper, NewsletterDigest, PaperLinks
 
@@ -14,7 +15,7 @@ ARXIV_NS = "{http://arxiv.org/schemas/atom}"
 class ArxivClient:
     """Client to query the arXiv API and produce semantic, LLM-ready data."""
 
-    BASE_URL = "http://export.arxiv.org/api/query"
+    BASE_URL = "https://export.arxiv.org/api/query"
 
     def __init__(self, base_url: str = BASE_URL, timeout: int = 20):
         self.base_url = base_url
@@ -44,16 +45,11 @@ class ArxivClient:
             "sortBy": sort_by,
             "sortOrder": sort_order,
         }
-        url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "DailyBugleNewsletter/1.0 (mailto:dailybugle@example.com)"},
-        )
+        headers = {"User-Agent": "DailyBugleNewsletter/1.0 (mailto:dailybugle@example.com)"}
+        resp = requests.get(self.base_url, params=params, headers=headers, timeout=self.timeout)
+        resp.raise_for_status()
 
-        with urllib.request.urlopen(req, timeout=self.timeout) as response:
-            content = response.read()
-
-        return self.parse_feed(content)
+        return self.parse_feed(resp.content)
 
     def fetch_newsletter_digest(
         self,
