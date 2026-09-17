@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { RawPayloadViewer } from "@/components/RawPayloadViewer";
@@ -37,6 +38,7 @@ import {
   Code2,
   ArrowRight,
   ArrowUpRight,
+  BookOpen,
 } from "lucide-react";
 
 function DashboardContent() {
@@ -334,34 +336,43 @@ function DashboardContent() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-main)] selection:bg-indigo-500/30 selection:text-indigo-600 dark:selection:text-indigo-200 relative overflow-hidden transition-colors duration-200">
-      {/* Ambient Aurora Top Glow */}
-      <div className="absolute top-0 left-0 right-0 h-[450px] aurora-hero pointer-events-none -z-10" />
-      <div className="absolute top-36 left-1/2 -translate-x-1/2 w-[700px] h-[350px] aurora-glow-center pointer-events-none -z-10 blur-3xl opacity-50" />
+    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-main)] selection:bg-[var(--accent-terracotta)]/20 selection:text-[var(--accent-terracotta)] relative overflow-hidden transition-colors duration-400">
+      {/* Living Ambient Light Orbs */}
+      <div className="glow-orb-terracotta top-0 left-1/2 -translate-x-1/2 w-[650px] h-[350px] pointer-events-none -z-10 opacity-60" />
+      <div className="glow-orb-champagne top-[200px] left-[15%] w-[450px] h-[300px] pointer-events-none -z-10 opacity-45" />
 
       {/* Floating Glassmorphic Pill Header */}
       <Header />
 
       {/* Command Center Modern Pill Tab Bar */}
       <div className="pt-4 px-4 pb-2 max-w-6xl mx-auto w-full">
-        <div className="glass-nav rounded-2xl p-2 flex flex-wrap items-center justify-between gap-3 shadow-lg dark:shadow-2xl">
+        <div className="glass-editorial-nav rounded-2xl p-2 flex flex-wrap items-center justify-between gap-3 shadow-lg dark:shadow-2xl">
           {/* Module Pill Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {/* Quick Link to Today's Edition */}
+            <Link
+              href="/edition"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-[var(--accent-terracotta)]/15 border border-[var(--accent-terracotta)]/30 text-[var(--accent-terracotta)] hover:bg-[var(--accent-terracotta)]/25 transition-all shadow-sm"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Today's Edition</span>
+            </Link>
+
             <button
               onClick={() => setActiveTab("arxiv")}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
                 activeTab === "arxiv"
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
+                  ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-semibold shadow-md shadow-zinc-950/10 dark:shadow-white/10"
                   : "text-zinc-600 hover:text-zinc-950 hover:bg-black/[0.04] dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.06]"
               }`}
             >
-              <Cpu className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <Cpu className="w-4 h-4 text-[var(--accent-terracotta)]" />
               <span>arXiv Wire</span>
               {arxivResult && (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
                   activeTab === "arxiv"
                     ? "bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-950 font-bold"
-                    : "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                    : "bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300"
                 }`}>
                   {arxivResult.papers.length}
                 </span>

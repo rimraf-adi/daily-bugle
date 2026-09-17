@@ -5,15 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import {
-  Sparkles,
   ArrowUpRight,
   Menu,
   X,
-  Cpu,
+  BookOpen,
   Radio,
-  Globe,
-  Activity,
-  Terminal,
+  Cpu,
   Layers,
 } from "lucide-react";
 
@@ -22,39 +19,41 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { name: "Overview", href: "/" },
+    { name: "Front Page", href: "/" },
+    { name: "Today's Edition", href: "/edition" },
+    { name: "Signal Lab", href: "/dashboard" },
     { name: "arXiv Wire", href: "/dashboard?tab=arxiv" },
-    { name: "Reddit Watcher", href: "/dashboard?tab=reddit" },
-    { name: "Substack", href: "/dashboard?tab=substack" },
-    { name: "LLM Studio", href: "/dashboard?tab=llm" },
+    { name: "Reddit Watch", href: "/dashboard?tab=reddit" },
   ];
 
   return (
     <header className="sticky top-0 z-50 w-full pt-4 px-4 pb-2">
       <div className="max-w-6xl mx-auto">
         {/* Floating Glassmorphic Pill Navbar */}
-        <div className="glass-nav rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between">
-          {/* Brand Logo */}
+        <div className="glass-editorial-nav rounded-full px-4 sm:px-6 py-2.5 flex items-center justify-between">
+          {/* Brand Logo - Refined Typographic Monogram */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-400 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-zinc-950 text-[#fff8f2] dark:bg-[#f7f8f8] dark:text-[#08090a] flex items-center justify-center font-serif italic text-lg leading-none shadow-sm group-hover:scale-105 transition-transform">
+              B
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-200 transition-colors">
+              <span className="text-sm font-semibold tracking-tight text-zinc-950 dark:text-[#f7f8f8] group-hover:text-[var(--accent-terracotta)] transition-colors">
                 Daily Bugle
               </span>
-              <span className="text-[9px] font-mono tracking-widest text-indigo-600 dark:text-indigo-400/80 -mt-1 hidden sm:block font-medium">
-                AI INTELLIGENCE
+              <span className="text-[9px] font-mono tracking-widest text-[#5b5a57] dark:text-[#8a8f98] -mt-0.5 hidden sm:block font-medium">
+                THE DIGITAL EDITION
               </span>
             </div>
           </Link>
 
           {/* Center Navigation Links (Desktop) */}
-          <nav className="hidden md:flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-3 py-1">
+          <nav className="hidden md:flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-3 py-1">
             {navLinks.map((link) => {
               const isActive =
                 link.href === "/"
                   ? pathname === "/"
+                  : link.href === "/edition"
+                  ? pathname === "/edition"
                   : pathname.startsWith("/dashboard") &&
                     typeof window !== "undefined" &&
                     window.location.search.includes(link.href.split("?")[1] || "");
@@ -77,21 +76,21 @@ export function Header() {
 
           {/* Right Action, Live Status & Theme Toggle */}
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="hidden lg:inline text-[11px]">Live Streams</span>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-terracotta)]/10 border border-[var(--accent-terracotta)]/25 text-[var(--accent-terracotta)] text-xs font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
+              <span className="hidden lg:inline text-[11px] font-medium">Finite Briefing</span>
             </div>
 
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
-            {/* Command Center CTA */}
+            {/* Read Today's Edition CTA */}
             <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 transition-all shadow-md shadow-zinc-950/10 dark:shadow-white/10 group"
+              href="/edition"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold btn-editorial-primary group"
             >
-              <span>Command Center</span>
-              <div className="w-4 h-4 rounded-full bg-white text-zinc-900 dark:bg-zinc-900 dark:text-white flex items-center justify-center group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+              <span>Today's Edition</span>
+              <div className="w-4 h-4 rounded-full bg-[var(--accent-terracotta)] text-white flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
                 <ArrowUpRight className="w-2.5 h-2.5" />
               </div>
             </Link>
@@ -112,7 +111,7 @@ export function Header() {
 
         {/* Mobile Dropdown Panel */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-2 glass-panel rounded-2xl p-4 border border-black/10 dark:border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="md:hidden mt-2 glass-editorial-card rounded-2xl p-4 border border-black/10 dark:border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex flex-col gap-1.5">
               {navLinks.map((link) => (
                 <Link
@@ -125,16 +124,16 @@ export function Header() {
                 </Link>
               ))}
               <div className="pt-3 mt-2 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Streams Active</span>
+                <div className="flex items-center gap-1.5 text-[var(--accent-terracotta)] text-xs font-mono">
+                  <span className="w-2 h-2 rounded-full bg-[var(--accent-terracotta)] animate-pulse" />
+                  <span>Finite Edition</span>
                 </div>
                 <Link
-                  href="/dashboard"
+                  href="/edition"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
+                  className="px-4 py-1.5 rounded-full text-xs font-semibold btn-editorial-terracotta"
                 >
-                  Launch App
+                  Read Edition
                 </Link>
               </div>
             </div>
