@@ -22,7 +22,14 @@ from arxiv import (
 )
 from llm_router import LLMRouter, ChatResponse
 from gmail import GmailClient, SubstackEmail
-from reddit import RedditCrawler, SubredditTracker, TrackedSubreddit, RedditPost
+from reddit import (
+    COMMON_SUBREDDIT_ALIASES,
+    RedditCrawler,
+    RedditPost,
+    SubredditTracker,
+    TrackedSubreddit,
+    normalize_subreddit,
+)
 
 
 def render_dashboard() -> None:
@@ -170,7 +177,26 @@ def render_dashboard() -> None:
         if reddit_mode == "Ad-Hoc Subreddit Explorer":
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
-                sub_input = st.text_input("Subreddit Name", value="LocalLLaMA", key="reddit_sub_input")
+                POPULAR_AI_SUBS = [
+                    "r/artificial (General AI Community)",
+                    "r/LocalLLaMA (Open-Source & Local LLMs)",
+                    "r/MachineLearning (Academic ML Research)",
+                    "r/singularity (AGI & Frontier Tech)",
+                    "r/ArtificialInteligence (AI Discussions)",
+                    "r/ChatGPT (OpenAI & Chatbot Discussions)",
+                    "r/ClaudeAI (Anthropic Claude Discussions)",
+                    "Custom Subreddit...",
+                ]
+                sub_preset = st.selectbox("Select Subreddit", POPULAR_AI_SUBS, index=0, key="reddit_sub_preset")
+                if sub_preset == "Custom Subreddit...":
+                    raw_sub = st.text_input("Subreddit Name", value="artificial", key="reddit_sub_input")
+                else:
+                    raw_sub = sub_preset.split(" ")[0].replace("r/", "")
+                
+                clean_sub = normalize_subreddit(raw_sub)
+                if clean_sub.lower() != raw_sub.lower().replace("r/", ""):
+                    st.caption(f"💡 Normalized alias: `r/{raw_sub}` ➔ `r/{clean_sub}`")
+
             with col2:
                 listing = st.selectbox("Listing Stream", ["hot", "new", "top", "rising"], key="reddit_listing_select")
                 time_filter = st.selectbox("Time Filter (for top)", ["day", "week", "month", "year", "all"], key="reddit_time_filter")
@@ -179,31 +205,39 @@ def render_dashboard() -> None:
                 r_fetch = st.button("📡 Fetch Raw Reddit Feed", type="primary", use_container_width=True, key="reddit_fetch_btn")
 
             if r_fetch:
-                with st.spinner(f"Crawling r/{sub_input} ({listing})..."):
+                with st.spinner(f"Crawling r/{clean_sub} ({listing})..."):
                     t0 = time.time()
                     crawler = RedditCrawler()
-                    clean_sub = sub_input.replace("r/", "").strip()
-                    url = f"{crawler.BASE_URL}/r/{clean_sub}/{listing}/.rss"
+                    params = {}
                     if listing == "top":
-                        url += f"?t={time_filter}"
+                        params["t"] = time_filter
+                    query_str = f"?{urllib.parse.urlencode(params)}" if params else ""
+                    url = f"{crawler.BASE_URL}/r/{clean_sub}/{listing}/.rss{query_str}"
                     
                     try:
-                        xml_content = crawler._fetch_url(url)
-                        posts = crawler.parse_feed_xml(xml_content, fallback_sub=f"r/{clean_sub}")[:r_limit]
+                        posts = crawler.get_posts(clean_sub, listing=listing, limit=r_limit, time_filter=time_filter if listing == "top" else None)
                         latency = time.time() - t0
+                        xml_content = crawler._fetch_url(url)
                         st.session_state["reddit_cached_data"] = {
                             "posts": posts,
                             "raw_xml": xml_content,
                             "url": url,
                             "latency": latency,
+                            "sub": clean_sub,
                         }
                     except Exception as e:
-                        st.error(f"Reddit crawl failed: {e}")
+                        err_msg = str(e)
+                        if "404" in err_msg:
+                            st.error(f"❌ Subreddit 'r/{clean_sub}' was not found on Reddit (HTTP 404). Note: the main AI subreddits are `r/artificial`, `r/ArtificialInteligence`, or `r/MachineLearning`.")
+                        elif "429" in err_msg:
+                            st.warning("⚠️ Reddit rate limit reached (HTTP 429). Please wait a few seconds before crawling again.")
+                        else:
+                            st.error(f"Reddit crawl failed: {e}")
 
             r_cache = st.session_state.get("reddit_cached_data")
             if r_cache:
                 posts = r_cache["posts"]
-                st.info(f"Retrieved **{len(posts)} posts** in `{r_cache['latency']:.2f}s` | Endpoint: `{r_cache['url']}`")
+                st.info(f"Retrieved **{len(posts)} posts** from `r/{r_cache.get('sub', clean_sub)}` in `{r_cache['latency']:.2f}s` | Endpoint: `{r_cache['url']}`")
 
                 r_tab1, r_tab2, r_tab3 = st.tabs(["Structured Raw Posts", "Raw JSON Dumps", "Raw Atom Stream"])
 

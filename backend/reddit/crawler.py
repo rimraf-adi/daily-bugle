@@ -53,6 +53,24 @@ class _RedditHTMLCleaner(HTMLParser):
         return raw.strip()
 
 
+COMMON_SUBREDDIT_ALIASES: Dict[str, str] = {
+    "artificialintelligence": "artificial",
+    "ai": "artificial",
+    "ml": "MachineLearning",
+    "localllm": "LocalLLaMA",
+    "llama": "LocalLLaMA",
+    "claude": "ClaudeAI",
+    "chatgpt": "ChatGPT",
+    "openai": "OpenAI",
+}
+
+
+def normalize_subreddit(name: str) -> str:
+    """Strip 'r/' prefix and map known informal aliases or misspellings to canonical subreddits."""
+    clean = name.replace("r/", "").strip()
+    return COMMON_SUBREDDIT_ALIASES.get(clean.lower(), clean)
+
+
 class RedditCrawler:
     """
     Unofficial Reddit crawler and watcher without API keys.
@@ -76,7 +94,7 @@ class RedditCrawler:
         self._cache: Dict[str, Tuple[float, List[RedditPost]]] = {}
         self._last_request_time: float = 0.0
 
-    def _rate_limit_throttle(self, min_interval: float = 2.0) -> None:
+    def _rate_limit_throttle(self, min_interval: float = 2.5) -> None:
         """Enforces a brief pause between network requests to prevent 429 rate-limiting."""
         now = time.time()
         elapsed = now - self._last_request_time
@@ -201,7 +219,7 @@ class RedditCrawler:
         :param limit: Maximum number of posts to return (up to 25 per feed).
         :param time_filter: Optional for 'top': 'day', 'week', 'month', 'year', 'all'.
         """
-        clean_sub = subreddit.replace("r/", "").strip()
+        clean_sub = normalize_subreddit(subreddit)
         params = {}
         if listing == "top" and time_filter:
             params["t"] = time_filter
