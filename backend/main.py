@@ -1,20 +1,15 @@
 """Main entrypoint for Daily Bugle backend."""
 
 import json
-from arxiv import (
-    ArxivClient,
-    ArxivPaper,
-    NewsletterDigest,
-    fetch_newsletter_digest,
-    search_papers,
-)
+from arxiv import ArxivPaper, fetch_newsletter_digest
+from llm_router import LLMRouter
 
 
 def main():
-    print("Daily Bugle Backend initialized!")
-    print("\n--- Example: Semantic Output Structure for Newsletter Manager ---")
+    print("Daily Bugle Backend initialized!\n")
 
-    # Example: Create a sample paper to demonstrate semantic LLM output
+    # 1. Demonstrate arxiv module
+    print("=== 1. arXiv Module Demo ===")
     sample_paper = ArxivPaper(
         arxiv_id="2403.12345v1",
         title="Attention Is All You Need 2.0: Scalable Next-Gen Transformers",
@@ -27,19 +22,24 @@ def main():
         category_names=["Artificial Intelligence", "Machine Learning"],
     )
 
-    print("\n1. Compact LLM Context Payload (token-efficient):")
+    print("Direct Full Article Link:", sample_paper.full_article_url)
+    print("Compact LLM Context Payload:")
     print(json.dumps(sample_paper.to_llm_context(), indent=2))
 
-    print("\n2. Markdown representation with Full Article link:")
-    print(sample_paper.to_markdown())
+    # 2. Demonstrate llm_router module (OpenRouter)
+    print("\n=== 2. LLM Router (OpenRouter) Demo ===")
+    router = LLMRouter()
+    print(f"Sending test completion to model: {router.default_model}...")
 
-    digest = NewsletterDigest(
-        topic="Daily Bugle AI Morning Brief",
-        papers=[sample_paper],
-    )
+    response = router.chat([
+        {"role": "user", "content": "Hello! What can you help me with today?"}
+    ])
 
-    print("\n3. Generated LLM Prompt for Newsletter Digest:")
-    print(digest.to_llm_prompt())
+    # Dict subscripting matching the OpenRouter response schema
+    print("\nResponse Content:")
+    print(response["choices"][0]["message"]["content"])
+    print("\nModel used:", response["model"])
+    print("Total tokens:", response["usage"]["total_tokens"])
 
 
 if __name__ == "__main__":

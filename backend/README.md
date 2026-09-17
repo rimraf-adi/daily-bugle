@@ -1,6 +1,6 @@
 # Daily Bugle - Backend
 
-A research paper and newsletter management backend powered by the `uv` package manager and Python 3.13+.
+A research paper ingestion and newsletter management backend powered by the `uv` package manager and Python 3.13+.
 
 ---
 
@@ -8,20 +8,28 @@ A research paper and newsletter management backend powered by the `uv` package m
 
 ```
 backend/
+├── .env                   # Local API keys (git-ignored)
+├── .env.example           # Configuration template
 ├── .gitignore
 ├── .venv/                 # Virtual environment managed by uv
-├── pyproject.toml         # Project metadata and dependencies
+├── pyproject.toml         # Dependencies and project metadata
 ├── uv.lock                # Deterministic dependency lockfile
 ├── README.md              # Project documentation (this file)
 ├── main.py                # Demonstration entrypoint
 ├── tests/
-│   └── test_arxiv.py      # Unit tests for parsing, models, and taxonomy
-└── arxiv/                 # arXiv Ingestion & Semantic Digest Module
+│   ├── test_arxiv.py      # arXiv ingestion and taxonomy unit tests
+│   └── test_llm_router.py # LLM router schema and mock tests
+├── arxiv/                 # arXiv Ingestion & Semantic Digest Module
+│   ├── __init__.py        # Public API facade
+│   ├── categories.py      # Full 166-category taxonomy across all 8 disciplines
+│   ├── client.py          # ArxivClient with HTTP query logic and Atom XML parser
+│   ├── models.py          # Semantic models (ArxivPaper, PaperLinks, NewsletterDigest)
+│   └── README.md          # Module specification for agents & developers
+└── llm_router/            # OpenRouter LLM Inference & Routing Module
     ├── __init__.py        # Public API facade
-    ├── categories.py      # Full 166-category taxonomy across all 8 disciplines
-    ├── client.py          # ArxivClient with HTTP query logic and Atom XML parser
-    ├── models.py          # Semantic models (ArxivPaper, PaperLinks, NewsletterDigest)
-    └── README.md          # Agent specification & capability guide
+    ├── client.py          # LLMRouter implementation using OpenRouter REST API
+    ├── models.py          # ChatMessage, ResponseChoice, UsageInfo, ChatResponse
+    └── README.md          # Module specification for agents & developers
 ```
 
 ---
@@ -37,31 +45,87 @@ cd backend
 # Sync dependencies and activate virtual environment
 uv sync
 
-# Run the demonstration script
-uv run main.py
+# Configure your environment variables
+cp .env.example .env
+# Edit .env with your OPENROUTER_API_KEY
 
-# Run test suite
+# Run unit tests
 uv run python -m unittest discover -s tests
+
+# Run demonstration script
+uv run main.py
+```
+
+---
+
+## Module: `llm_router`
+
+Unified model inference and routing via **OpenRouter**, supporting free and frontier models with automatic environment resolution.
+
+### How Agents Are Supposed to Identify It
+
+- **Namespace:** `llm_router` (accessible via `from llm_router import ...`)
+- **Primary Role:** Model routing and completion inference via OpenRouter API.
+- **Default Model:** `openrouter/free` (automatically routes across available free tier models).
+- **Environment:** Reads `OPENROUTER_API_KEY` from `.env` or system environment.
+
+### OpenRouter Response Schema
+
+The `ChatResponse` model directly supports both object attributes and standard dictionary indexing:
+
+```json
+{
+  "id": "gen-...",
+  "model": "upstage/solar-pro-3:free",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "..."
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 85,
+    "total_tokens": 97
+  }
+}
+```
+
+### Python Usage Example
+
+```python
+from llm_router import LLMRouter
+
+router = LLMRouter()
+
+# Send chat request
+response = router.chat([
+    {"role": "user", "content": "Hello! What can you help me with today?"}
+])
+
+# Dict-style access (matches OpenRouter JSON schema)
+print(response['choices'][0]['message']['content'])
+print('Model used:', response['model'])
+
+# Or convenient object attribute access
+print(response.content)
+print(response.model)
+print("Tokens used:", response.usage.total_tokens)
 ```
 
 ---
 
 ## Module: `arxiv`
 
-The `arxiv` module provides **semantic, LLM-ready data structures** with **guaranteed links to full articles (HTML & PDF)** and a comprehensive taxonomy of 166 arXiv subcategories.
+Provides **semantic, LLM-ready data structures** with **guaranteed links to full articles (HTML & PDF)** and a comprehensive taxonomy of 166 arXiv subcategories.
 
 ### How Agents Are Supposed to Identify It
 
-Autonomous coding agents, LLM pipelines, and orchestration frameworks can identify and route to this module via the following capability contract:
-
-- **Module Name:** `arxiv` (accessible via `from arxiv import ...` inside `backend`)
-- **Primary Capabilities:**
-  - Academic research ingestion across all 8 arXiv disciplines.
-  - Periodic newsletter digest assembly with prompt generation.
-  - LLM context generation (token-efficient dictionaries, semantic markdown).
-  - Taxonomy lookup and keyword-based category search.
-
-#### Intent Routing Table for Agents:
+- **Namespace:** `arxiv` (accessible via `from arxiv import ...`)
+- **Primary Role:** Research paper ingestion across all 8 arXiv disciplines.
+- **Intent Routing Table:**
 
 | Goal / Query | Function | Output |
 | :--- | :--- | :--- |
@@ -73,66 +137,25 @@ Autonomous coding agents, LLM pipelines, and orchestration frameworks can identi
 | **Full Article Links (HTML/PDF)**| `paper.links.html`, `paper.links.pdf`, `paper.full_article_url` | `str` (URL) |
 | **Taxonomy / Category Discovery**| `search_categories("robotics")`, `get_categories_by_subject("cs")` | `dict` |
 
-For detailed agent routing and specifications, see [`backend/arxiv/README.md`](file:///Users/adityakinjawadekar/Documents/100xcode/daily-bugle/backend/arxiv/README.md).
-
 ---
 
-## Concrete Code Examples
+## End-to-End Pipeline: Ingest Papers & Draft Newsletter with OpenRouter
 
-### 1. Generating a Periodic Newsletter for an LLM
 ```python
 from arxiv import fetch_newsletter_digest
+from llm_router import LLMRouter
 
-# 1. Fetch the latest breakthroughs across relevant categories
+# 1. Fetch latest breakthroughs across AI, Machine Learning, and NLP
 digest = fetch_newsletter_digest(
     categories=["cs.AI", "cs.LG", "cs.CL"],
-    max_results=5,
+    max_results=3,
     topic="Daily AI & LLM Morning Briefing",
 )
 
-# 2. Get a complete, prompt-ready template for Gemini / Claude / GPT
-prompt = digest.to_llm_prompt()
-print(prompt)
+# 2. Route prompt to OpenRouter to write the newsletter draft
+router = LLMRouter()
+newsletter = router.generate_newsletter(digest)
 
-# 3. Or get structured JSON payloads for tool-calling / function-calling
-payload = digest.to_llm_payload()
-```
-
-### 2. Accessing Full Article Links & Paper Metadata
-```python
-from arxiv import fetch_recent_papers
-
-papers = fetch_recent_papers(category="cs.AI", max_results=3)
-
-for paper in papers:
-    print(f"Title: {paper.title}")
-    print(f"Authors: {', '.join(paper.authors)}")
-    print(f"Topic: {paper.primary_category_name} ({paper.primary_category})")
-    print(f"Direct HTML Article: {paper.links.html}")
-    print(f"PDF Download: {paper.links.pdf}")
-    print(f"Abstract Page: {paper.links.abstract}")
-    print("---")
-```
-
-### 3. Searching the Complete arXiv Taxonomy (166 Categories)
-```python
-from arxiv import (
-    CATEGORY_MAP,
-    get_category_name,
-    search_categories,
-    get_categories_by_subject,
-    list_subjects,
-)
-
-# Search categories by keyword
-matches = search_categories("quantum")
-# e.g., {'quant-ph': 'Quantum Physics', 'cond-mat.quant-gas': 'Quantum Gases', ...}
-
-# Retrieve all subcategories for an entire discipline
-econ_topics = get_categories_by_subject("Economics")
-# e.g., {'econ.EM': 'Econometrics', 'econ.GN': 'General Economics', 'econ.TH': 'Theoretical Economics'}
-
-# Look up human-friendly name for any code
-print(get_category_name("astro-ph.GA"))
-# -> "Astrophysics of Galaxies"
+print(f"--- Generated via {newsletter.model} ---")
+print(newsletter.content)
 ```
