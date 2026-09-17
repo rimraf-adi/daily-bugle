@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { XMLParser } from "fast-xml-parser";
 import { RedditPost, RedditDigest, RedditQueryResult } from "@/types/reddit";
 
@@ -75,68 +73,22 @@ export function cleanRedditHtml(html: string): { cleanText: string; externalUrl?
   return { cleanText, externalUrl };
 }
 
-interface CacheEntry {
-  timestamp: number;
-  posts: RedditPost[];
-  rawXml: string;
-}
-
 export class RedditCrawler {
   private userAgent: string;
-  private cacheTtlMs: number;
   private timeoutMs: number;
-  private cache: Map<string, CacheEntry> = new Map();
   private lastRequestTime: number = 0;
   private throttleQueue: Promise<void> = Promise.resolve();
-  private diskCacheDir: string;
 
   constructor(
     userAgent: string = DEFAULT_USER_AGENT,
-    cacheTtlSeconds: number = 600, // 10 minutes cache
+    _cacheTtlSeconds: number = 0, // Zero cache
     timeoutSeconds: number = 20
   ) {
     this.userAgent = userAgent;
-    this.cacheTtlMs = cacheTtlSeconds * 1000;
     this.timeoutMs = timeoutSeconds * 1000;
-    this.diskCacheDir = path.join(process.cwd(), ".cache", "reddit");
-    this.initDiskCache();
   }
 
-  private initDiskCache() {
-    try {
-      if (!fs.existsSync(this.diskCacheDir)) {
-        fs.mkdirSync(this.diskCacheDir, { recursive: true });
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  private getDiskCache(key: string): CacheEntry | null {
-    try {
-      const filePath = path.join(this.diskCacheDir, `${encodeURIComponent(key)}.json`);
-      if (fs.existsSync(filePath)) {
-        const raw = fs.readFileSync(filePath, "utf-8");
-        const entry = JSON.parse(raw) as CacheEntry;
-        return entry;
-      }
-    } catch {
-      // Ignore
-    }
-    return null;
-  }
-
-  private saveDiskCache(key: string, entry: CacheEntry) {
-    try {
-      this.initDiskCache();
-      const filePath = path.join(this.diskCacheDir, `${encodeURIComponent(key)}.json`);
-      fs.writeFileSync(filePath, JSON.stringify(entry), "utf-8");
-    } catch {
-      // Ignore
-    }
-  }
-
-  private async throttle(minIntervalMs: number = 3000): Promise<void> {
+  private async throttle(minIntervalMs: number = 2500): Promise<void> {
     const currentQueue = this.throttleQueue;
     let nextResolve: () => void;
     this.throttleQueue = new Promise((resolve) => {
@@ -153,21 +105,9 @@ export class RedditCrawler {
     nextResolve!();
   }
 
-  private async fetchFeedXml(url: string): Promise<{ xml: string; fromCache: boolean; rateLimited?: boolean }> {
-    const now = Date.now();
-    const memCached = this.cache.get(url);
-    const diskCached = !memCached ? this.getDiskCache(url) : null;
-    const cached = memCached || diskCached;
-
-    if (cached) {
-      this.cache.set(url, cached);
-      // If within TTL, serve cache without hitting network
-      if (now - cached.timestamp < this.cacheTtlMs) {
-        return { xml: cached.rawXml, fromCache: true };
-      }
-    }
-
-    await this.throttle(3000);
+  // Pure live fetch: NO CACHE
+  private async fetchFeedXml(url: string): Promise<{ xml: string; fromCache: false; rateLimited?: boolean }> {
+    await this.throttle(2500);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -182,18 +122,11 @@ export class RedditCrawler {
         cache: "no-store",
       });
 
-      // Handle 429 Too Many Requests
       if (resp.status === 429) {
-        // If we have any cached data (even stale), return it gracefully
-        if (cached) {
-          return { xml: cached.rawXml, fromCache: true, rateLimited: true };
-        }
-
         const resetHeader = resp.headers.get("x-ratelimit-reset");
-        const resetSeconds = resetHeader ? parseInt(resetHeader, 10) : 5;
+        const resetSeconds = resetHeader ? parseInt(resetHeader, 10) : 4;
 
-        // If cooldown is short, wait and retry once
-        if (resetSeconds <= 6) {
+        if (resetSeconds <= 5) {
           await new Promise((resolve) => setTimeout(resolve, (resetSeconds + 1) * 1000));
           resp = await fetch(url, {
             headers: {
@@ -204,25 +137,18 @@ export class RedditCrawler {
             cache: "no-store",
           });
         }
+
+        if (resp.status === 429) {
+          throw new Error(`Reddit rate-limit reached (HTTP 429). Please wait a few seconds before refetching.`);
+        }
       }
 
       if (!resp.ok) {
-        if (cached) {
-          return { xml: cached.rawXml, fromCache: true, rateLimited: true };
-        }
-        if (resp.status === 429) {
-          return { xml: "", fromCache: false, rateLimited: true };
-        }
         throw new Error(`Failed to crawl Reddit feed from '${url}' (HTTP ${resp.status})`);
       }
 
       const rawXml = await resp.text();
       return { xml: rawXml, fromCache: false };
-    } catch (err) {
-      if (cached) {
-        return { xml: cached.rawXml, fromCache: true };
-      }
-      throw err;
     } finally {
       clearTimeout(timer);
     }
@@ -306,20 +232,10 @@ export class RedditCrawler {
     const queryStr = params.toString() ? `?${params.toString()}` : "";
     const url = `${BASE_URL}/r/${cleanSub}/${listing}.rss${queryStr}`;
 
-    const { xml, fromCache, rateLimited } = await this.fetchFeedXml(url);
+    const { xml } = await this.fetchFeedXml(url);
     const allPosts = this.parseFeedXml(xml, `r/${cleanSub}`);
-
-    if (allPosts.length > 0) {
-      const entry: CacheEntry = {
-        timestamp: Date.now(),
-        posts: allPosts,
-        rawXml: xml,
-      };
-      this.cache.set(url, entry);
-      this.saveDiskCache(url, entry);
-    }
-
     const posts = allPosts.slice(0, limit);
+
     return {
       posts,
       rawXml: xml,
@@ -388,10 +304,4 @@ export class RedditCrawler {
   }
 }
 
-// Global singleton attached to globalThis to preserve cache across Next.js reloads
-const globalForReddit = globalThis as unknown as {
-  redditCrawler?: RedditCrawler;
-};
-
-export const defaultRedditCrawler =
-  globalForReddit.redditCrawler || (globalForReddit.redditCrawler = new RedditCrawler());
+export const defaultRedditCrawler = new RedditCrawler();

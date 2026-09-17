@@ -78,7 +78,7 @@ function DashboardContent() {
       params.set("maxResults", String(arxivLimit));
       params.set("sortBy", arxivSortBy);
 
-      const resp = await fetch(`/api/arxiv?${params.toString()}`);
+      const resp = await fetch(`/api/arxiv?${params.toString()}`, { cache: "no-store" });
       if (!resp.ok) {
         const errJson = await resp.json().catch(() => ({}));
         throw new Error(errJson.error || `HTTP ${resp.status}`);
@@ -129,7 +129,7 @@ function DashboardContent() {
         params.set("timeFilter", redditTimeFilter);
       }
 
-      const resp = await fetch(`/api/reddit?${params.toString()}`);
+      const resp = await fetch(`/api/reddit?${params.toString()}`, { cache: "no-store" });
       if (!resp.ok) {
         const errJson = await resp.json().catch(() => ({}));
         throw new Error(errJson.error || `HTTP ${resp.status}`);
@@ -151,7 +151,7 @@ function DashboardContent() {
   const loadWatchlist = async () => {
     setWatchlistLoading(true);
     try {
-      const resp = await fetch("/api/reddit/watchlist?action=list");
+      const resp = await fetch("/api/reddit/watchlist?action=list", { cache: "no-store" });
       const data = await resp.json();
       if (data.watchlist) {
         setWatchlist(data.watchlist);
@@ -237,7 +237,7 @@ function DashboardContent() {
         limit: String(gmailLimit),
         unreadOnly: String(gmailUnreadOnly),
       });
-      const resp = await fetch(`/api/gmail?${params.toString()}`);
+      const resp = await fetch(`/api/gmail?${params.toString()}`, { cache: "no-store" });
       const data: GmailQueryResult = await resp.json();
       if (!resp.ok) {
         throw new Error(data.message || data.error || `HTTP ${resp.status}`);
@@ -316,7 +316,7 @@ function DashboardContent() {
     setSnapshotLoading(true);
     setSnapshotError(null);
     try {
-      const resp = await fetch("/api/snapshot");
+      const resp = await fetch("/api/snapshot", { cache: "no-store" });
       const data = await resp.json();
       setSnapshotData(data);
     } catch (err) {
@@ -857,7 +857,7 @@ function DashboardContent() {
                   onClick={async () => {
                     setRedditLoading(true);
                     try {
-                      const resp = await fetch("/api/reddit/watchlist?action=poll");
+                      const resp = await fetch("/api/reddit/watchlist?action=poll", { cache: "no-store" });
                       const data = await resp.json();
                       if (data.posts) {
                         setRedditResult({

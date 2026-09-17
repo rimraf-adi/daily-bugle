@@ -4,6 +4,7 @@ import { defaultSubredditTracker } from "@/services/reddit/tracker";
 import { defaultGmailClient } from "@/services/gmail/client";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const timestamp = new Date().toISOString();
