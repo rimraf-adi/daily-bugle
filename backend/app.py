@@ -1,7 +1,14 @@
 """Streamlit dashboard entrypoint for Daily Bugle backend."""
 
+import ssl
 import sys
 from pathlib import Path
+
+# Resolve macOS SSL certificate lookup failures across all libraries
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 
 # Ensure backend root directory is in sys.path
 backend_dir = Path(__file__).resolve().parent

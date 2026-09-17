@@ -1,8 +1,14 @@
 import json
+import ssl
 import time
 from pathlib import Path
 import requests
 import streamlit as st
+
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 
 # Import Daily Bugle modules
 from arxiv import (
